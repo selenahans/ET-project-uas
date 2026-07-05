@@ -1,3 +1,5 @@
+// import 'package:memory_game_sawit/main.dart';
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -5,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../main.dart'; // Membawa variable active_user jika diperlukan
 import 'login.dart';
-// import 'package:memory_game_sawit/main.dart';
 
 class Category extends StatefulWidget {
   const Category({super.key});
@@ -16,6 +17,7 @@ class Category extends StatefulWidget {
 
 class _CategoryState extends State<Category> {
   String _username = active_user; // Mengambil user aktif dari main.dart
+  int _currentBottomIndex = 0; // Mengatur index menu bawah yang aktif
 
   @override
   void initState() {
@@ -35,9 +37,10 @@ class _CategoryState extends State<Category> {
 
   // Fungsi untuk mengambil data kategori + komik dari API
   Future<List<dynamic>> fetchCategoriesWithComics() async {
-    // Sesuaikan URL ini dengan file PHP Opsi 2 kamu kemarin
-    var url = Uri.parse("https://ubaya.cloud/flutter/160423025/komiku/get_comics_by_category.php");
-    
+    var url = Uri.parse(
+      "https://ubaya.cloud/flutter/160423025/komiku/get_comics_by_category.php",
+    );
+
     try {
       var response = await http.get(url);
       if (response.statusCode == 200) {
@@ -60,7 +63,7 @@ class _CategoryState extends State<Category> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.clear(); // Hapus data login
     active_user = "";
-    
+
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
@@ -78,9 +81,62 @@ class _CategoryState extends State<Category> {
             icon: const Icon(Icons.logout),
             onPressed: doLogout,
             tooltip: "Logout",
-          )
+          ),
         ],
       ),
+
+      // ==================== 1. DRAWER SAMPING (MENU KIRI) ====================
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            UserAccountsDrawerHeader(
+              accountName: Text(_username),
+              accountEmail: const Text(
+                "user@komiku.com",
+              ), // Sesuaikan email jika ada
+              currentAccountPicture: const CircleAvatar(
+                backgroundColor: Colors.white,
+                child: Icon(Icons.person, size: 40, color: Colors.blueAccent),
+              ),
+              decoration: const BoxDecoration(color: Colors.blueAccent),
+            ),
+            ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text('Home'),
+              onTap: () {
+                Navigator.pop(context); // Tutup drawer
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.bookmark),
+              title: const Text('Bookmark Saya'),
+              onTap: () {
+                Navigator.pop(context);
+                // Navigasi ke halaman bookmark jika ada
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings),
+              title: const Text('Pengaturan'),
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.power_settings_new, color: Colors.red),
+              title: const Text('Logout', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(context);
+                doLogout();
+              },
+            ),
+          ],
+        ),
+      ),
+
+      // ==================== KONTEN UTAMA Halaman ====================
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -92,7 +148,7 @@ class _CategoryState extends State<Category> {
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ),
-          
+
           // Konten Utama menggunakan FutureBuilder
           Expanded(
             child: FutureBuilder<List<dynamic>>(
@@ -102,9 +158,12 @@ class _CategoryState extends State<Category> {
                   return const Center(child: CircularProgressIndicator());
                 } else if (snapshot.hasError) {
                   return Center(
-                    child: Text(
-                      "Error: ${snapshot.error}",
-                      style: const TextStyle(color: Colors.red),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        "Error: ${snapshot.error}",
+                        style: const TextStyle(color: Colors.red),
+                      ),
                     ),
                   );
                 } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -117,37 +176,72 @@ class _CategoryState extends State<Category> {
                   itemCount: categories.length,
                   itemBuilder: (context, index) {
                     var category = categories[index];
-                    List<dynamic> comics = category['comics'];
+                    List<dynamic> comics = category['comics'] ?? [];
 
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Nama Kategori
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                category['nama_kategori'],
-                                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blueAccent),
-                              ),
-                              Text(
-                                "${comics.length} Komik",
-                                style: const TextStyle(color: Colors.grey, fontSize: 12),
-                              )
-                            ],
+                        InkWell(
+                          onTap: () {
+                            print(
+                              "Membuka kategori: ${category['nama_kategori']}",
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                              vertical: 12.0,
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        category['nama_kategori'],
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.blueAccent,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        "${comics.length} Komik",
+                                        style: const TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 16,
+                                  color: Colors.blueAccent,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
 
                         // List Komik Horizontal di dalam Kategori
                         comics.isEmpty
                             ? const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
-                                child: Text("Belum ada komik di kategori ini.", style: TextStyle(color: Colors.grey)),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 16.0,
+                                  vertical: 10,
+                                ),
+                                child: Text(
+                                  "Belum ada komik di kategori ini.",
+                                  style: TextStyle(color: Colors.grey),
+                                ),
                               )
                             : SizedBox(
-                                height: 220, // Tinggi area scroll komik
+                                height: 220,
                                 child: ListView.builder(
                                   scrollDirection: Axis.horizontal,
                                   padding: const EdgeInsets.only(left: 16.0),
@@ -155,41 +249,52 @@ class _CategoryState extends State<Category> {
                                   itemBuilder: (context, cIndex) {
                                     var comic = comics[cIndex];
                                     return Container(
-                                      width: 120, // Lebar card komik
-                                      margin: const EdgeInsets.only(right: 12.0),
+                                      width: 120,
+                                      margin: const EdgeInsets.only(
+                                        right: 12.0,
+                                      ),
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
-                                          // Gambar Poster Komik
                                           ClipRRect(
-                                            borderRadius: BorderRadius.circular(8.0),
+                                            borderRadius: BorderRadius.circular(
+                                              8.0,
+                                            ),
                                             child: Image.network(
-                                              comic['poster'],
+                                              comic['poster'] ?? '',
                                               height: 150,
                                               width: 120,
                                               fit: BoxFit.cover,
-                                              errorBuilder: (context, error, stackTrace) {
-                                                // Jika url gambar error/gagal load, tampilkan placeholder grey
-                                                return Container(
-                                                  height: 150,
-                                                  color: Colors.grey[300],
-                                                  child: const Icon(Icons.broken_image, color: Colors.grey),
-                                                );
-                                              },
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
+                                                    return Container(
+                                                      height: 150,
+                                                      color: Colors.grey[300],
+                                                      child: const Icon(
+                                                        Icons.broken_image,
+                                                        color: Colors.grey,
+                                                      ),
+                                                    );
+                                                  },
                                             ),
                                           ),
                                           const SizedBox(height: 4),
-                                          // Judul Komik
                                           Text(
-                                            comic['judul'],
+                                            comic['judul'] ?? 'Tanpa Judul',
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                            ),
                                           ),
-                                          // Jumlah Views
                                           Text(
-                                            "👁️ ${comic['views']} views",
-                                            style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                            "👁️ ${comic['views'] ?? 0} views",
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.grey,
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -197,7 +302,12 @@ class _CategoryState extends State<Category> {
                                   },
                                 ),
                               ),
-                        const Divider(height: 25, thickness: 1, indent: 16, endIndent: 16),
+                        const Divider(
+                          height: 25,
+                          thickness: 1,
+                          indent: 16,
+                          endIndent: 16,
+                        ),
                       ],
                     );
                   },
@@ -205,6 +315,30 @@ class _CategoryState extends State<Category> {
               },
             ),
           ),
+        ],
+      ),
+
+      // ==================== 2. DRAWER DI BAWAH (BOTTOM NAVIGATION BAR) ====================
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentBottomIndex,
+        onTap: (int index) {
+          // Memastikan index yang ditekan berada dalam jangkauan yang valid (0 sampai 2)
+          if (index >= 0 && index < 3) {
+            setState(() {
+              _currentBottomIndex = index;
+            });
+            print("Menu bawah index $index ditekan");
+          }
+        },
+        selectedItemColor: Colors.blueAccent,
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Jelajah'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.trending_up),
+            label: 'Populer',
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
         ],
       ),
     );
