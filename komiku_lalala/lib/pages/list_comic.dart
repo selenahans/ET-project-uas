@@ -19,13 +19,11 @@ class ListComicScreen extends StatefulWidget {
 }
 
 class _ListComicScreenState extends State<ListComicScreen> {
-  // Palet Warna
+
   static const Color colorOrange = Color(0xFFEC642A);
   static const Color colorSunnyYellow = Color(0xFFFAAA21);
   static const Color colorCream = Color(0xFFFDE2CD);
   static const Color colorCocoa = Color(0xFF642D0A);
-
-  // Controller & Debounce untuk Search API
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
   String _searchKeyword = "";
@@ -36,18 +34,13 @@ class _ListComicScreenState extends State<ListComicScreen> {
     _debounce?.cancel();
     super.dispose();
   }
-
-  // Fungsi untuk memanggil API (Kategori ATAU Search)
   Future<Map<String, dynamic>> fetchComics() async {
     Uri url;
-
-    // Jika searchKeyword terisi, panggil API Search
     if (_searchKeyword.trim().isNotEmpty) {
       url = Uri.parse(
         "https://ubaya.cloud/flutter/160423025/komiku/search_comics.php?q=${Uri.encodeComponent(_searchKeyword.trim())}",
       );
     } 
-    // Jika searchKeyword kosong, panggil API Kategori default
     else {
       url = Uri.parse(
         "https://ubaya.cloud/flutter/160423025/komiku/get_list_comics_by_category.php?kategori_id=${widget.idKategori}",
@@ -66,7 +59,6 @@ class _ListComicScreenState extends State<ListComicScreen> {
     }
   }
 
-  // Menangani input pencarian dengan Debounce (mencegah spam request API)
   void _onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
@@ -97,7 +89,6 @@ class _ListComicScreenState extends State<ListComicScreen> {
       ),
       body: Column(
         children: [
-          // ==================== SEARCH BAR ====================
           Padding(
             padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 12.0),
             child: TextField(
@@ -134,22 +125,16 @@ class _ListComicScreenState extends State<ListComicScreen> {
               ),
             ),
           ),
-
-          // ==================== GRID KOMIK (API BUILDER) ====================
           Expanded(
             child: FutureBuilder<Map<String, dynamic>>(
-              // Key memicu render ulang FutureBuilder tiap searchKeyword berubah
               key: ValueKey(_searchKeyword),
               future: fetchComics(),
               builder: (context, snapshot) {
-                // 1. Loading State
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
                     child: CircularProgressIndicator(color: colorOrange),
                   );
                 }
-
-                // 2. Connection Error State
                 if (snapshot.hasError) {
                   return Center(
                     child: Padding(
@@ -165,8 +150,6 @@ class _ListComicScreenState extends State<ListComicScreen> {
 
                 var responseData = snapshot.data;
                 List<dynamic> listKomik = responseData?['data'] ?? [];
-
-                // 3. Empty Data State
                 if (responseData == null ||
                     responseData['result'] == 'EMPTY' ||
                     responseData['result'] == 'ERROR' ||
@@ -188,8 +171,6 @@ class _ListComicScreenState extends State<ListComicScreen> {
                     ),
                   );
                 }
-
-                // 4. Success State
                 return GridView.builder(
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.symmetric(
@@ -197,10 +178,10 @@ class _ListComicScreenState extends State<ListComicScreen> {
                     vertical: 4.0,
                   ),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3, // Ukuran kolom pas untuk poster komik
-                    childAspectRatio: 0.58,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
+                    crossAxisCount: 4, 
+                    childAspectRatio: 1,
+                    crossAxisSpacing: 5,
+                    mainAxisSpacing: 5,
                   ),
                   itemCount: listKomik.length,
                   itemBuilder: (context, index) {
@@ -241,7 +222,6 @@ class _ListComicScreenState extends State<ListComicScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Poster Komik + Rating Badge
                               Expanded(
                                 child: Stack(
                                   children: [
@@ -299,8 +279,6 @@ class _ListComicScreenState extends State<ListComicScreen> {
                                   ],
                                 ),
                               ),
-
-                              // Judul & Views
                               Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: Column(

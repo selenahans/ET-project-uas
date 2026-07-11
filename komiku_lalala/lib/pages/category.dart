@@ -1,12 +1,9 @@
-// import 'package:memory_game_sawit/main.dart';
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:komiku_lalala/pages/list_comic.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../main.dart'; // Membawa variable active_user jika diperlukan
+import '../main.dart'; 
 import 'login.dart';
 
 class Category extends StatefulWidget {
@@ -17,10 +14,9 @@ class Category extends StatefulWidget {
 }
 
 class _CategoryState extends State<Category> {
-  String _username = active_user; // Mengambil user aktif dari main.dart
-  int _currentBottomIndex = 0; // Mengatur index menu bawah yang aktif
+  String _username = active_user; 
+  int _currentBottomIndex = 0; 
 
-  // Palet Warna dari image_cd2de9.jpg
   static const Color colorOrange = Color(0xFFEC642A);
   static const Color colorSunnyYellow = Color(0xFFFAAA21);
   static const Color colorCream = Color(0xFFFDE2CD);
@@ -102,70 +98,6 @@ class _CategoryState extends State<Category> {
           ),
         ],
       ),
-      drawer: Drawer(
-        child: Column(
-          children: [
-            UserAccountsDrawerHeader(
-              accountName: Text(
-                _username,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: Colors.white,
-                ),
-              ),
-              accountEmail: const Text(
-                "user@komiku.com",
-                style: TextStyle(color: Colors.white70),
-              ),
-              currentAccountPicture: CircleAvatar(
-                backgroundColor: colorCream,
-                child: const Icon(Icons.person, size: 40, color: colorCocoa),
-              ),
-              decoration: const BoxDecoration(
-                color: colorOrange,
-                borderRadius: BorderRadius.only(
-                  bottomRight: Radius.circular(20),
-                ),
-              ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.home_rounded, color: colorOrange),
-                    title: const Text('Home', style: TextStyle(color: colorCocoa, fontWeight: FontWeight.w600)),
-                    onTap: () => Navigator.pop(context),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.bookmark_rounded, color: colorOrange),
-                    title: const Text('Bookmark Saya', style: TextStyle(color: colorCocoa, fontWeight: FontWeight.w600)),
-                    onTap: () => Navigator.pop(context),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.settings_rounded, color: colorOrange),
-                    title: const Text('Pengaturan', style: TextStyle(color: colorCocoa, fontWeight: FontWeight.w600)),
-                    onTap: () => Navigator.pop(context),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Divider(),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.power_settings_new_rounded, color: Colors.redAccent),
-                    title: const Text('Logout', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      doLogout();
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
       body: FutureBuilder<List<dynamic>>(
         future: fetchCategoriesWithComics(),
         builder: (context, snapshot) {
@@ -194,7 +126,6 @@ class _CategoryState extends State<Category> {
               allRecentComics.addAll(cat['comics']);
             }
           }
-
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             child: Column(
@@ -253,8 +184,6 @@ class _CategoryState extends State<Category> {
                     ),
                   ),
                 ),
-
-                // 2. Section Terakhir Dibaca (Recent Books)
                 if (allRecentComics.isNotEmpty) ...[
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16.0),
@@ -360,8 +289,6 @@ class _CategoryState extends State<Category> {
                   ),
                   const SizedBox(height: 10),
                 ],
-
-                // 3. Section Daftar Kategori (Hanya Nama Kategori & Jumlah Komik)
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                   child: Text(

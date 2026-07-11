@@ -2,7 +2,9 @@
 import 'package:flutter/material.dart';
 import 'category.dart';
 import 'search_comic.dart';
-import 'make_comic.dart';
+// import 'make_comic.dart';
+import 'my_comics.dart';
+
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -17,7 +19,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   final List<Widget> _pages = const [
     Category(),
     SearchComic(),
-    MakeComic(),
+    MyComicsPage(userId: 0),
   ];
 
   @override
@@ -27,9 +29,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         index: _selectedIndex,
         children: _pages,
       ),
-      // ⚠️ PASTIIN BAGIAN INI ADA & TIDAK TERTUTUP
       bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed, // Mencegah item tersembunyi
+        type: BottomNavigationBarType.fixed, 
         currentIndex: _selectedIndex,
         onTap: (index) {
           setState(() {
@@ -47,7 +48,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.add_box),
-            label: 'Buat Komik',
+            label: 'Komik Buatanku',
           ),
         ],
       ),

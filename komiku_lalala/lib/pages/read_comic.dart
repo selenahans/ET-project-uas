@@ -21,6 +21,12 @@ class _ReadComicState extends State<ReadComic> {
 
   late Future<Map<String, dynamic>> _comicDetailFuture;
 
+  // Color Palette dari image_eb2649.png
+  static const Color orangeColor = Color(0xFFEC642A);
+  static const Color sunnyYellowColor = Color(0xFFFAAA21);
+  static const Color creamColor = Color(0xFFFDE2CD);
+  static const Color cocoaColor = Color(0xFF642D0A);
+
   @override
   void initState() {
     super.initState();
@@ -83,7 +89,10 @@ class _ReadComicState extends State<ReadComic> {
         _commentController.clear();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Komentar berhasil dikirim!")),
+            const SnackBar(
+              content: Text("Komentar berhasil dikirim!"),
+              backgroundColor: cocoaColor,
+            ),
           );
         }
         _reloadComicDetail();
@@ -118,17 +127,19 @@ class _ReadComicState extends State<ReadComic> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: creamColor.withOpacity(0.4),
       appBar: AppBar(
         title: Text(widget.judulKomik),
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: orangeColor,
         foregroundColor: Colors.white,
       ),
       body: FutureBuilder<Map<String, dynamic>>(
         future: _comicDetailFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: orangeColor),
+            );
           }
 
           if (snapshot.hasError) {
@@ -150,6 +161,7 @@ class _ReadComicState extends State<ReadComic> {
             return Center(
               child: Text(
                 responseData?['message'] ?? "Gagal memuat halaman komik.",
+                style: const TextStyle(color: cocoaColor),
               ),
             );
           }
@@ -162,22 +174,19 @@ class _ReadComicState extends State<ReadComic> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // -------------------------------------------------------------
-                // 1. HEADER CHAPTER (PEMISAH BAB)
-                // -------------------------------------------------------------
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
                     vertical: 12,
                     horizontal: 16,
                   ),
-                  color: Colors.blueAccent.withOpacity(0.1),
+                  color: creamColor,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Icon(
                         Icons.menu_book_rounded,
-                        color: Colors.blueAccent,
+                        color: cocoaColor,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
@@ -186,7 +195,7 @@ class _ReadComicState extends State<ReadComic> {
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.blueAccent,
+                          color: cocoaColor,
                         ),
                       ),
                     ],
@@ -194,16 +203,13 @@ class _ReadComicState extends State<ReadComic> {
                 ),
                 const SizedBox(height: 12),
 
-                // -------------------------------------------------------------
-                // 2. DAFTAR GAMBAR (DENGAN MAX WIDTH & PADDING AGAR LEBIH KECIL)
-                // -------------------------------------------------------------
                 pages.isEmpty
                     ? const Padding(
                       padding: EdgeInsets.all(32.0),
                       child: Center(
                         child: Text(
                           "Halaman komik belum tersedia.",
-                          style: TextStyle(color: Colors.grey),
+                          style: TextStyle(color: cocoaColor),
                         ),
                       ),
                     )
@@ -214,7 +220,6 @@ class _ReadComicState extends State<ReadComic> {
                       itemBuilder: (context, index) {
                         return Center(
                           child: Container(
-                            // Membatasi lebar maksimum gambar agar tidak memenuhi layar tablet/HP lebar
                             constraints: const BoxConstraints(maxWidth: 500),
                             margin: const EdgeInsets.symmetric(
                               vertical: 6,
@@ -222,12 +227,12 @@ class _ReadComicState extends State<ReadComic> {
                             ),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
+                                  color: cocoaColor.withOpacity(0.08),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
                                 ),
                               ],
                             ),
@@ -237,7 +242,7 @@ class _ReadComicState extends State<ReadComic> {
                                 Image.network(
                                   pages[index],
                                   width: double.infinity,
-                                  fit: BoxFit.contain, // contain agar rasio gambar asli terjaga
+                                  fit: BoxFit.contain,
                                   loadingBuilder: (
                                     context,
                                     child,
@@ -246,16 +251,18 @@ class _ReadComicState extends State<ReadComic> {
                                     if (loadingProgress == null) return child;
                                     return Container(
                                       height: 220,
-                                      color: Colors.grey[200],
+                                      color: creamColor.withOpacity(0.3),
                                       child: const Center(
-                                        child: CircularProgressIndicator(),
+                                        child: CircularProgressIndicator(
+                                          color: orangeColor,
+                                        ),
                                       ),
                                     );
                                   },
                                   errorBuilder: (context, error, stackTrace) {
                                     return Container(
                                       height: 150,
-                                      color: Colors.grey[200],
+                                      color: creamColor.withOpacity(0.3),
                                       child: const Center(
                                         child: Column(
                                           mainAxisAlignment:
@@ -263,14 +270,14 @@ class _ReadComicState extends State<ReadComic> {
                                           children: [
                                             Icon(
                                               Icons.broken_image,
-                                              color: Colors.grey,
+                                              color: orangeColor,
                                               size: 36,
                                             ),
                                             SizedBox(height: 4),
                                             Text(
                                               "Gagal memuat halaman",
                                               style: TextStyle(
-                                                color: Colors.grey,
+                                                color: cocoaColor,
                                                 fontSize: 12,
                                               ),
                                             ),
@@ -280,19 +287,19 @@ class _ReadComicState extends State<ReadComic> {
                                     );
                                   },
                                 ),
-                                // Indicator Nomor Halaman di bawah gambar
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    vertical: 4,
+                                    vertical: 6,
                                   ),
-                                  color: Colors.grey[50],
+                                  color: creamColor.withOpacity(0.5),
                                   width: double.infinity,
                                   child: Text(
                                     "Halaman ${index + 1} dari ${pages.length}",
                                     textAlign: TextAlign.center,
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontSize: 11,
-                                      color: Colors.grey[600],
+                                      color: cocoaColor,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ),
@@ -303,27 +310,26 @@ class _ReadComicState extends State<ReadComic> {
                       },
                     ),
 
-                // Pemisah Akhir Chapter
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   child: Row(
                     children: const [
-                      Expanded(child: Divider()),
+                      Expanded(
+                        child: Divider(color: creamColor, thickness: 1.5),
+                      ),
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: 12),
                         child: Text(
                           "Akhir dari Chapter",
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                          style: TextStyle(color: cocoaColor, fontSize: 12),
                         ),
                       ),
-                      Expanded(child: Divider()),
+                      Expanded(
+                        child: Divider(color: creamColor, thickness: 1.5),
+                      ),
                     ],
                   ),
                 ),
-
-                // -------------------------------------------------------------
-                // 3. FORM INPUT RATING & KOMENTAR
-                // -------------------------------------------------------------
                 Container(
                   color: Colors.white,
                   padding: const EdgeInsets.all(16.0),
@@ -335,6 +341,7 @@ class _ReadComicState extends State<ReadComic> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          color: cocoaColor,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -343,16 +350,25 @@ class _ReadComicState extends State<ReadComic> {
                         children: [
                           const Text(
                             "Rating: ",
-                            style: TextStyle(fontWeight: FontWeight.w500),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: cocoaColor,
+                            ),
                           ),
                           DropdownButton<double>(
                             value: _userRating,
+                            dropdownColor: creamColor,
                             items:
                                 [1.0, 2.0, 3.0, 4.0, 5.0]
                                     .map(
                                       (e) => DropdownMenuItem(
                                         value: e,
-                                        child: Text("⭐ $e"),
+                                        child: Text(
+                                          "⭐ $e",
+                                          style: const TextStyle(
+                                            color: cocoaColor,
+                                          ),
+                                        ),
                                       ),
                                     )
                                     .toList(),
@@ -368,9 +384,24 @@ class _ReadComicState extends State<ReadComic> {
 
                       TextField(
                         controller: _commentController,
-                        decoration: const InputDecoration(
+                        style: const TextStyle(color: cocoaColor),
+                        decoration: InputDecoration(
                           hintText: "Tulis komentar...",
-                          border: OutlineInputBorder(),
+                          hintStyle: TextStyle(
+                            color: cocoaColor.withOpacity(0.5),
+                          ),
+                          focusedBorder: const OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: orangeColor,
+                              width: 2,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: cocoaColor.withOpacity(0.3),
+                            ),
+                          ),
+                          border: const OutlineInputBorder(),
                         ),
                         maxLines: 2,
                       ),
@@ -381,9 +412,12 @@ class _ReadComicState extends State<ReadComic> {
                         child: ElevatedButton(
                           onPressed: _isSubmitting ? null : _submitComment,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blueAccent,
+                            backgroundColor: orangeColor,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
                           child:
                               _isSubmitting
@@ -395,7 +429,12 @@ class _ReadComicState extends State<ReadComic> {
                                       strokeWidth: 2,
                                     ),
                                   )
-                                  : const Text("Kirim Komentar"),
+                                  : const Text(
+                                    "Kirim Komentar",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                         ),
                       ),
 
@@ -405,6 +444,7 @@ class _ReadComicState extends State<ReadComic> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
+                          color: cocoaColor,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -412,7 +452,7 @@ class _ReadComicState extends State<ReadComic> {
                       comments.isEmpty
                           ? const Text(
                             "Belum ada komentar.",
-                            style: TextStyle(color: Colors.grey),
+                            style: TextStyle(color: cocoaColor),
                           )
                           : ListView.builder(
                             shrinkWrap: true,
@@ -426,6 +466,14 @@ class _ReadComicState extends State<ReadComic> {
                               String ratingVal = "${item['rating'] ?? '0'}";
 
                               return Card(
+                                color: creamColor.withOpacity(0.3),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  side: BorderSide(
+                                    color: creamColor.withOpacity(0.8),
+                                  ),
+                                ),
                                 margin: const EdgeInsets.only(bottom: 8.0),
                                 child: ListTile(
                                   title: Text(
@@ -433,11 +481,15 @@ class _ReadComicState extends State<ReadComic> {
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
+                                      color: cocoaColor,
                                     ),
                                   ),
                                   subtitle: Padding(
                                     padding: const EdgeInsets.only(top: 4.0),
-                                    child: Text(isiKomentar),
+                                    child: Text(
+                                      isiKomentar,
+                                      style: const TextStyle(color: cocoaColor),
+                                    ),
                                   ),
                                   trailing: Container(
                                     padding: const EdgeInsets.symmetric(
@@ -445,14 +497,14 @@ class _ReadComicState extends State<ReadComic> {
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.amber.shade50,
+                                      color: sunnyYellowColor.withOpacity(0.3),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
                                       "⭐ $ratingVal",
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.amber.shade900,
+                                        color: cocoaColor,
                                       ),
                                     ),
                                   ),

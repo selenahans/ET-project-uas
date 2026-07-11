@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'read_comic.dart'; // Sesuaikan lokasi import file ReadComic Anda
+import 'read_comic.dart'; 
 
 class SearchComic extends StatefulWidget {
   const SearchComic({super.key});
@@ -12,7 +12,7 @@ class SearchComic extends StatefulWidget {
 }
 
 class _SearchComicState extends State<SearchComic> {
-  // Palet Warna
+
   static const Color colorOrange = Color(0xFFEC642A);
   static const Color colorSunnyYellow = Color(0xFFFAAA21);
   static const Color colorCream = Color(0xFFFDE2CD);
@@ -28,8 +28,6 @@ class _SearchComicState extends State<SearchComic> {
     _debounce?.cancel();
     super.dispose();
   }
-
-  // Fungsi Fetch Data dari Search API
   Future<Map<String, dynamic>> fetchSearchResult() async {
     if (_searchKeyword.trim().isEmpty) {
       return {'result': 'EMPTY_QUERY'};
@@ -51,7 +49,6 @@ class _SearchComicState extends State<SearchComic> {
     }
   }
 
-  // Handle Input + Debounce
   void _onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
@@ -114,14 +111,13 @@ class _SearchComicState extends State<SearchComic> {
               key: ValueKey(_searchKeyword),
               future: fetchSearchResult(),
               builder: (context, snapshot) {
-                // 1. Loading State
+
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
                     child: CircularProgressIndicator(color: colorOrange),
                   );
                 }
 
-                // 2. Connection Error State
                 if (snapshot.hasError) {
                   return Center(
                     child: Padding(
@@ -138,7 +134,6 @@ class _SearchComicState extends State<SearchComic> {
                 var responseData = snapshot.data;
                 List<dynamic> listKomik = responseData?['data'] ?? [];
 
-                // 3. Empty Result State
                 if (responseData == null ||
                     responseData['result'] == 'EMPTY' ||
                     responseData['result'] == 'ERROR' ||
@@ -172,8 +167,6 @@ class _SearchComicState extends State<SearchComic> {
                     ),
                   );
                 }
-
-                // 4. Success Grid State
                 return GridView.builder(
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.symmetric(
@@ -181,10 +174,10 @@ class _SearchComicState extends State<SearchComic> {
                     vertical: 12.0,
                   ),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    childAspectRatio: 0.58,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
+                    crossAxisCount: 4, 
+                    childAspectRatio: 1,
+                    crossAxisSpacing: 5,
+                    mainAxisSpacing: 5,
                   ),
                   itemCount: listKomik.length,
                   itemBuilder: (context, index) {
@@ -225,7 +218,7 @@ class _SearchComicState extends State<SearchComic> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Poster + Rating
+
                               Expanded(
                                 child: Stack(
                                   children: [
@@ -286,7 +279,6 @@ class _SearchComicState extends State<SearchComic> {
                                 ),
                               ),
 
-                              // Judul & Views
                               Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: Column(
@@ -337,7 +329,6 @@ class _SearchComicState extends State<SearchComic> {
     );
   }
 
-  // Tampilan placeholder sebelum user mengetik apapun
   Widget _buildInitialState() {
     return Center(
       child: Column(

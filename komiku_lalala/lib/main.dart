@@ -60,7 +60,7 @@ class MyApp extends StatelessWidget {
         // 'category': (context) => const Category(),
         'login': (context) => const LoginScreen(),
         'search_comic': (context) => const SearchComic(),
-        'make': (context) => const MakeComic(),
+        'make': (context) => const MakeComic(userId: 0),
         'main': (context) => const MainNavigationScreen(),
       },
       onGenerateRoute: (settings) {
