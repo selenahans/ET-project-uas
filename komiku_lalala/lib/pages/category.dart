@@ -450,47 +450,6 @@ class _CategoryState extends State<Category> {
           );
         },
       ),
-
-      // ==================== BOTTOM NAVIGATION BAR ====================
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentBottomIndex,
-          onTap: (int index) {
-            if (index >= 0 && index < 3) {
-              setState(() {
-                _currentBottomIndex = index;
-              });
-            }
-          },
-          backgroundColor: Colors.white,
-          selectedItemColor: colorOrange,
-          unselectedItemColor: colorCocoa.withOpacity(0.4),
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.explore_rounded),
-              label: 'Jelajah',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.trending_up_rounded),
-              label: 'Populer',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_rounded),
-              label: 'Profil',
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
