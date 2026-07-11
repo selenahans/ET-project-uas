@@ -59,9 +59,36 @@ class MyApp extends StatelessWidget {
       routes: {
         'category': (context) => const Category(),
         'login': (context) => const LoginScreen(),
-        'list_comic': (context) => const ListComicScreen(),
         'search_comic': (context) => const SearchComic(),
         'make': (context) => const MakeComic(),
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name == 'list_comic') {
+          final arguments = settings.arguments;
+          if (arguments is Map<String, dynamic>) {
+            final idKategori = arguments['idKategori'];
+            final namaKategori = arguments['namaKategori'];
+
+            if (idKategori is int && namaKategori is String) {
+              return MaterialPageRoute(
+                builder: (context) => ListComicScreen(
+                  idKategori: idKategori,
+                  namaKategori: namaKategori,
+                ),
+              );
+            }
+          }
+
+          return MaterialPageRoute(
+            builder: (context) => const Scaffold(
+              body: Center(
+                child: Text('Argument route list_comic tidak valid.'),
+              ),
+            ),
+          );
+        }
+
+        return null;
       },
       home: active_user == "" ? const LoginScreen() : const Category(),
     );

@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:komiku_lalala/pages/list_comic.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../main.dart'; // Membawa variable active_user jika diperlukan
@@ -185,6 +186,27 @@ class _CategoryState extends State<Category> {
                           onTap: () {
                             print(
                               "Membuka kategori: ${category['nama_kategori']}",
+                            );
+                            print("Isi data category saat ini: $category");
+
+                            // UBAH DI SINI: Ganti 'id_kategori' menjadi 'id' sesuai isi terminal kamu
+                            int idYangDitemukan =
+                                int.tryParse(category['id'].toString()) ?? 0;
+
+                            print(
+                              "ID Kategori yang akan dikirim: $idYangDitemukan",
+                            );
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ListComicScreen(
+                                  // Sesuaikan dengan nama class halaman keduamu
+                                  idKategori: idYangDitemukan,
+                                  namaKategori:
+                                      category['nama_kategori'] ?? 'Kategori',
+                                ),
+                              ),
                             );
                           },
                           child: Padding(
