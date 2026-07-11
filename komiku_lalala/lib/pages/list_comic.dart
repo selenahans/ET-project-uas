@@ -106,12 +106,12 @@ class _ListComicScreenState extends State<ListComicScreen> {
           // List<dynamic> listKomik = responseData['data'] ?? [];
 
           return GridView.builder(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(4.0),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2, // Menampilkan 2 kolom komik berjajar
-              childAspectRatio: 0.65, // Mengatur rasio tinggi/lebar kotak komik
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
+              crossAxisCount: 6, // Mengubah jumlah kolom menjadi 6
+              childAspectRatio: 0.5, // Penyesuaian rasio agar teks dan gambar muat rapat
+              crossAxisSpacing: 4, // Merapatkan spasi horizontal
+              mainAxisSpacing: 4, // Merapatkan spasi vertikal
             ),
             itemCount: listKomik.length,
             itemBuilder: (context, index) {
@@ -156,7 +156,7 @@ class _ListComicScreenState extends State<ListComicScreen> {
                                 child: const Icon(
                                   Icons.broken_image,
                                   color: Colors.grey,
-                                  size: 40,
+                                  size: 20,
                                 ),
                               );
                             },
@@ -167,7 +167,7 @@ class _ListComicScreenState extends State<ListComicScreen> {
                       // Informasi Judul dan Views Komik
                       // Informasi Judul, Rating, dan Views Komik
                       Padding(
-                        padding: const EdgeInsets.all(8.0),
+                        padding: const EdgeInsets.all(2.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -177,10 +177,10 @@ class _ListComicScreenState extends State<ListComicScreen> {
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 14,
+                                fontSize: 9, // Penyesuaian ukuran font agar muat di 6 kolom
                               ),
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 2),
 
                             // Baris Rating & Views
                             Row(
@@ -191,14 +191,14 @@ class _ListComicScreenState extends State<ListComicScreen> {
                                   children: [
                                     const Icon(
                                       Icons.star,
-                                      size: 14,
+                                      size: 10,
                                       color: Colors.amber,
                                     ),
-                                    const SizedBox(width: 2),
+                                    const SizedBox(width: 1),
                                     Text(
                                       "${komik['rating_avg'] ?? '0.0'}",
                                       style: const TextStyle(
-                                        fontSize: 11,
+                                        fontSize: 8,
                                         fontWeight: FontWeight.w600,
                                         color: Colors.black87,
                                       ),
@@ -210,7 +210,7 @@ class _ListComicScreenState extends State<ListComicScreen> {
                                 Text(
                                   "👁️ ${komik['views'] ?? 0}",
                                   style: const TextStyle(
-                                    fontSize: 11,
+                                    fontSize: 8,
                                     color: Colors.grey,
                                   ),
                                 ),
