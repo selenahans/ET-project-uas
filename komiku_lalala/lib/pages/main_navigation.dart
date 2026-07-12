@@ -25,6 +25,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      
       body: IndexedStack(
         index: _selectedIndex,
         children: _pages,
