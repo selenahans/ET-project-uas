@@ -19,7 +19,6 @@ class ListComicScreen extends StatefulWidget {
 }
 
 class _ListComicScreenState extends State<ListComicScreen> {
-
   static const Color colorOrange = Color(0xFFEC642A);
   static const Color colorSunnyYellow = Color(0xFFFAAA21);
   static const Color colorCream = Color(0xFFFDE2CD);
@@ -34,14 +33,14 @@ class _ListComicScreenState extends State<ListComicScreen> {
     _debounce?.cancel();
     super.dispose();
   }
+
   Future<Map<String, dynamic>> fetchComics() async {
     Uri url;
     if (_searchKeyword.trim().isNotEmpty) {
       url = Uri.parse(
-        "https://ubaya.cloud/flutter/160423025/komiku/search_comics.php?q=${Uri.encodeComponent(_searchKeyword.trim())}",
+        "https://ubaya.cloud/flutter/160423025/komiku/search_comics.php?q=${Uri.encodeComponent(_searchKeyword.trim())}&kategori_id=${widget.idKategori}",
       );
-    } 
-    else {
+    } else {
       url = Uri.parse(
         "https://ubaya.cloud/flutter/160423025/komiku/get_list_comics_by_category.php?kategori_id=${widget.idKategori}",
       );
@@ -154,9 +153,20 @@ class _ListComicScreenState extends State<ListComicScreen> {
                     responseData['result'] == 'EMPTY' ||
                     responseData['result'] == 'ERROR' ||
                     listKomik.isEmpty) {
-                  String msg = responseData?['message'] ??
-                      "Tidak ada komik yang ditemukan.";
-
+                  String msg;
+                  if (_searchKeyword.trim().isNotEmpty) {
+                    msg =
+                        "Tidak ada komik dengan nama '$_searchKeyword' pada kategori '${widget.namaKategori}'.";
+                  } else {
+                    msg =
+                        responseData?['message'] ??
+                        "Tidak ada komik di kategori ini.";
+                  }
+                  if (_searchKeyword.trim().isEmpty) {
+                    msg =
+                        responseData?['message'] ??
+                        "Tidak ada komik yang ditemukan.";
+                  }
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
@@ -178,7 +188,7 @@ class _ListComicScreenState extends State<ListComicScreen> {
                     vertical: 4.0,
                   ),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4, 
+                    crossAxisCount: 4,
                     childAspectRatio: 1,
                     crossAxisSpacing: 5,
                     mainAxisSpacing: 5,
@@ -230,18 +240,19 @@ class _ListComicScreenState extends State<ListComicScreen> {
                                       width: double.infinity,
                                       height: double.infinity,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return Container(
-                                          color: colorCream,
-                                          child: const Center(
-                                            child: Icon(
-                                              Icons.broken_image_rounded,
-                                              color: colorCocoa,
-                                              size: 24,
-                                            ),
-                                          ),
-                                        );
-                                      },
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                            return Container(
+                                              color: colorCream,
+                                              child: const Center(
+                                                child: Icon(
+                                                  Icons.broken_image_rounded,
+                                                  color: colorCocoa,
+                                                  size: 24,
+                                                ),
+                                              ),
+                                            );
+                                          },
                                     ),
                                     Positioned(
                                       top: 6,
@@ -253,7 +264,9 @@ class _ListComicScreenState extends State<ListComicScreen> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: colorCocoa.withOpacity(0.75),
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,

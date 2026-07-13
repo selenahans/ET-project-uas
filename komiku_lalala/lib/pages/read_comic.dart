@@ -16,12 +16,15 @@ class ReadComic extends StatefulWidget {
 
 class _ReadComicState extends State<ReadComic> {
   final TextEditingController _commentController = TextEditingController();
-  double _userRating = 5.0;
+  double _userRating = 1.0;
   bool _isSubmitting = false;
+  bool _isRatingExpanded = false;
+
+  int? _replyingToCommentId;
+  String? _replyingToUsername;
 
   late Future<Map<String, dynamic>> _comicDetailFuture;
 
-  // Color Palette dari image_eb2649.png
   static const Color orangeColor = Color(0xFFEC642A);
   static const Color sunnyYellowColor = Color(0xFFFAAA21);
   static const Color creamColor = Color(0xFFFDE2CD);
@@ -40,14 +43,27 @@ class _ReadComicState extends State<ReadComic> {
   }
 
   Future<Map<String, dynamic>> fetchComicDetail() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int userId = prefs.getInt("user_id") ?? 1;
+
     var url = Uri.parse(
-      "https://ubaya.cloud/flutter/160423025/komiku/get_comic_detail.php?komik_id=${widget.komikId}",
+      "https://ubaya.cloud/flutter/160423025/komiku/get_comic_detail.php?komik_id=${widget.komikId}&user_id=$userId",
     );
 
     try {
       var response = await http.get(url);
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        var data = jsonDecode(response.body);
+        if (data['user_rating'] != null) {
+          double ratingDariServer =
+              double.tryParse(data['user_rating'].toString()) ?? 0.0;
+
+          if (ratingDariServer > 0.0) {
+            _userRating = ratingDariServer;
+            _isRatingExpanded = true;
+          }
+        }
+        return data;
       } else {
         throw Exception(
           "Gagal memuat detail komik (Status Code: ${response.statusCode})",
@@ -72,21 +88,26 @@ class _ReadComicState extends State<ReadComic> {
       "https://ubaya.cloud/flutter/160423025/komiku/add_comment.php",
     );
 
-    try {
-      var response = await http.post(
-        url,
-        body: {
-          "komik_id": widget.komikId.toString(),
-          "user_id": userId.toString(),
-          "comment": _commentController.text,
-          "rating": _userRating.toString(),
-        },
-      );
+    Map<String, String> requestBody = {
+      "komik_id": widget.komikId.toString(),
+      "user_id": userId.toString(),
+      "comment": _commentController.text.trim(),
+    };
 
+    if (_replyingToCommentId != null) {
+      requestBody["parent_id"] = _replyingToCommentId.toString();
+    }
+
+    try {
+      var response = await http.post(url, body: requestBody);
       var data = jsonDecode(response.body);
 
       if (data['result'] == 'OK') {
         _commentController.clear();
+        setState(() {
+          _replyingToCommentId = null;
+          _replyingToUsername = null;
+        });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -115,6 +136,43 @@ class _ReadComicState extends State<ReadComic> {
           _isSubmitting = false;
         });
       }
+    }
+  }
+
+  Future<void> _saveRating(double rating) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int userId = prefs.getInt("user_id") ?? 1;
+
+    var url = Uri.parse(
+      "https://ubaya.cloud/flutter/160423025/komiku/add_rating.php",
+    );
+
+    try {
+      var response = await http.post(
+        url,
+        body: {
+          "komik_id": widget.komikId.toString(),
+          "user_id": userId.toString(),
+          "rating": rating.toString(),
+        },
+      );
+
+      var data = jsonDecode(response.body);
+
+      if (data['result'] == 'OK') {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(data['message']),
+              backgroundColor: cocoaColor,
+              duration: const Duration(seconds: 1),
+            ),
+          );
+        }
+        _reloadComicDetail();
+      }
+    } catch (e) {
+      print("Error saat menyimpan rating: $e");
     }
   }
 
@@ -156,19 +214,33 @@ class _ReadComicState extends State<ReadComic> {
           }
 
           var responseData = snapshot.data;
-
           if (responseData == null || responseData['result'] == 'ERROR') {
             return Center(
               child: Text(
-                responseData?['message'] ?? "Gagal memuat halaman komik.",
+                "Gagal memuat halaman komik.",
                 style: const TextStyle(color: cocoaColor),
               ),
             );
           }
 
           var pages = responseData['pages'] as List<dynamic>? ?? [];
-          var comments = responseData['comments'] as List<dynamic>? ?? [];
+          var rawComments = responseData['comments'] as List<dynamic>? ?? [];
           String chapterTitle = responseData['chapter_title'] ?? "Chapter 1";
+
+          List<dynamic> parentComments = [];
+          Map<int, List<dynamic>> repliesMap = {};
+
+          for (var c in rawComments) {
+            if (c['parent_id'] == null) {
+              parentComments.add(c);
+            } else {
+              int pId = int.parse(c['parent_id'].toString());
+              if (!repliesMap.containsKey(pId)) {
+                repliesMap[pId] = [];
+              }
+              repliesMap[pId]!.add(c);
+            }
+          }
 
           return SingleChildScrollView(
             child: Column(
@@ -205,110 +277,94 @@ class _ReadComicState extends State<ReadComic> {
 
                 pages.isEmpty
                     ? const Padding(
-                      padding: EdgeInsets.all(32.0),
-                      child: Center(
-                        child: Text(
-                          "Halaman komik belum tersedia.",
-                          style: TextStyle(color: cocoaColor),
+                        padding: EdgeInsets.all(32.0),
+                        child: Center(
+                          child: Text(
+                            "Halaman komik belum tersedia.",
+                            style: TextStyle(color: cocoaColor),
+                          ),
                         ),
-                      ),
-                    )
+                      )
                     : ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: pages.length,
-                      itemBuilder: (context, index) {
-                        return Center(
-                          child: Container(
-                            constraints: const BoxConstraints(maxWidth: 500),
-                            margin: const EdgeInsets.symmetric(
-                              vertical: 6,
-                              horizontal: 16,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: cocoaColor.withOpacity(0.08),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: Column(
-                              children: [
-                                Image.network(
-                                  pages[index],
-                                  width: double.infinity,
-                                  fit: BoxFit.contain,
-                                  loadingBuilder: (
-                                    context,
-                                    child,
-                                    loadingProgress,
-                                  ) {
-                                    if (loadingProgress == null) return child;
-                                    return Container(
-                                      height: 220,
-                                      color: creamColor.withOpacity(0.3),
-                                      child: const Center(
-                                        child: CircularProgressIndicator(
-                                          color: orangeColor,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      height: 150,
-                                      color: creamColor.withOpacity(0.3),
-                                      child: const Center(
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.broken_image,
-                                              color: orangeColor,
-                                              size: 36,
-                                            ),
-                                            SizedBox(height: 4),
-                                            Text(
-                                              "Gagal memuat halaman",
-                                              style: TextStyle(
-                                                color: cocoaColor,
-                                                fontSize: 12,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: pages.length,
+                        itemBuilder: (context, index) {
+                          return Center(
+                            child: Container(
+                              constraints: const BoxConstraints(maxWidth: 500),
+                              margin: const EdgeInsets.symmetric(
+                                vertical: 6,
+                                horizontal: 16,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: cocoaColor.withOpacity(0.08),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: Column(
+                                children: [
+                                  Image.network(
+                                    pages[index],
+                                    width: double.infinity,
+                                    fit: BoxFit.contain,
+                                    loadingBuilder:
+                                        (context, child, loadingProgress) {
+                                          if (loadingProgress == null)
+                                            return child;
+                                          return Container(
+                                            height: 220,
+                                            color: creamColor.withOpacity(0.3),
+                                            child: const Center(
+                                              child: CircularProgressIndicator(
+                                                color: orangeColor,
                                               ),
                                             ),
-                                          ],
+                                          );
+                                        },
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        height: 150,
+                                        color: creamColor.withOpacity(0.3),
+                                        child: const Center(
+                                          child: Icon(
+                                            Icons.broken_image,
+                                            color: orangeColor,
+                                            size: 36,
+                                          ),
                                         ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 6,
+                                      );
+                                    },
                                   ),
-                                  color: creamColor.withOpacity(0.5),
-                                  width: double.infinity,
-                                  child: Text(
-                                    "Halaman ${index + 1} dari ${pages.length}",
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: cocoaColor,
-                                      fontWeight: FontWeight.w500,
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 6,
+                                    ),
+                                    color: creamColor.withOpacity(0.5),
+                                    width: double.infinity,
+                                    child: Text(
+                                      "Halaman ${index + 1} dari ${pages.length}",
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: cocoaColor,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
+                          );
+                        },
+                      ),
 
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 20),
@@ -346,47 +402,119 @@ class _ReadComicState extends State<ReadComic> {
                       ),
                       const SizedBox(height: 8),
 
-                      Row(
-                        children: [
-                          const Text(
-                            "Rating: ",
-                            style: TextStyle(
-                              fontWeight: FontWeight.w500,
-                              color: cocoaColor,
-                            ),
-                          ),
-                          DropdownButton<double>(
-                            value: _userRating,
-                            dropdownColor: creamColor,
-                            items:
-                                [1.0, 2.0, 3.0, 4.0, 5.0]
-                                    .map(
-                                      (e) => DropdownMenuItem(
-                                        value: e,
-                                        child: Text(
-                                          "⭐ $e",
-                                          style: const TextStyle(
-                                            color: cocoaColor,
-                                          ),
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeOutBack,
+                        child: _isRatingExpanded
+                            ? Row(
+                                children: List.generate(5, (index) {
+                                  bool isSelected = index < _userRating;
+                                  return GestureDetector(
+                                    onTap: () {
+                                      double selectedRating = index + 1.0;
+                                      setState(
+                                        () => _userRating = selectedRating,
+                                      );
+                                      _saveRating(selectedRating);
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(
+                                        right: 8.0,
+                                      ),
+                                      child: AnimatedSwitcher(
+                                        duration: const Duration(
+                                          milliseconds: 300,
+                                        ),
+                                        transitionBuilder: (child, animation) =>
+                                            ScaleTransition(
+                                              scale: animation,
+                                              child: child,
+                                            ),
+                                        child: Icon(
+                                          isSelected
+                                              ? Icons.star_rounded
+                                              : Icons.star_border_rounded,
+                                          key: ValueKey<bool>(isSelected),
+                                          color: isSelected
+                                              ? sunnyYellowColor
+                                              : cocoaColor.withOpacity(0.3),
+                                          size: 36,
                                         ),
                                       ),
-                                    )
-                                    .toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() => _userRating = val);
-                              }
-                            },
-                          ),
-                        ],
+                                    ),
+                                  );
+                                }),
+                              )
+                            : InkWell(
+                                onTap: () =>
+                                    setState(() => _isRatingExpanded = true),
+                                borderRadius: BorderRadius.circular(8),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.star_rounded,
+                                      color: sunnyYellowColor,
+                                      size: 36,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      "Ketuk untuk beri rating",
+                                      style: TextStyle(
+                                        color: cocoaColor.withOpacity(0.6),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
+
+                      if (_replyingToCommentId != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: creamColor,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                "Membalas @$_replyingToUsername",
+                                style: const TextStyle(
+                                  color: cocoaColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              InkWell(
+                                onTap: () => setState(() {
+                                  _replyingToCommentId = null;
+                                  _replyingToUsername = null;
+                                }),
+                                child: const Icon(
+                                  Icons.close,
+                                  size: 16,
+                                  color: cocoaColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
 
                       TextField(
                         controller: _commentController,
                         style: const TextStyle(color: cocoaColor),
                         decoration: InputDecoration(
-                          hintText: "Tulis komentar...",
+                          hintText: _replyingToCommentId != null
+                              ? "Tulis balasan..."
+                              : "Tulis komentar...",
                           hintStyle: TextStyle(
                             color: cocoaColor.withOpacity(0.5),
                           ),
@@ -419,22 +547,19 @@ class _ReadComicState extends State<ReadComic> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          child:
-                              _isSubmitting
-                                  ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                  : const Text(
-                                    "Kirim Komentar",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                          child: _isSubmitting
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
                                   ),
+                                )
+                              : const Text(
+                                  "Kirim Komentar",
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
                         ),
                       ),
 
@@ -449,69 +574,165 @@ class _ReadComicState extends State<ReadComic> {
                       ),
                       const SizedBox(height: 12),
 
-                      comments.isEmpty
+                      parentComments.isEmpty
                           ? const Text(
-                            "Belum ada komentar.",
-                            style: TextStyle(color: cocoaColor),
-                          )
+                              "Belum ada komentar.",
+                              style: TextStyle(color: cocoaColor),
+                            )
                           : ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: comments.length,
-                            itemBuilder: (context, index) {
-                              var item = comments[index];
-                              String namaUser = item['nama'] ?? 'Anonim';
-                              String isiKomentar =
-                                  item['comment'] ?? item['komentar'] ?? '';
-                              String ratingVal = "${item['rating'] ?? '0'}";
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: parentComments.length,
+                              itemBuilder: (context, index) {
+                                var parent = parentComments[index];
+                                int parentId = int.parse(
+                                  parent['id'].toString(),
+                                );
+                                List<dynamic> replies =
+                                    repliesMap[parentId] ?? [];
 
-                              return Card(
-                                color: creamColor.withOpacity(0.3),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  side: BorderSide(
-                                    color: creamColor.withOpacity(0.8),
-                                  ),
-                                ),
-                                margin: const EdgeInsets.only(bottom: 8.0),
-                                child: ListTile(
-                                  title: Text(
-                                    namaUser,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      color: cocoaColor,
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 12.0),
+                                  padding: const EdgeInsets.all(12.0),
+                                  decoration: BoxDecoration(
+                                    color: creamColor.withOpacity(
+                                      0.3,
+                                    ), // Background oren 1 blok penuh
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: creamColor.withOpacity(0.8),
                                     ),
                                   ),
-                                  subtitle: Padding(
-                                    padding: const EdgeInsets.only(top: 4.0),
-                                    child: Text(
-                                      isiKomentar,
-                                      style: const TextStyle(color: cocoaColor),
-                                    ),
-                                  ),
-                                  trailing: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: sunnyYellowColor.withOpacity(0.3),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      "⭐ $ratingVal",
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: cocoaColor,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            parent['username'] ?? 'Anonim',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: cocoaColor,
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: sunnyYellowColor
+                                                  .withOpacity(0.3),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              "⭐ ${parent['rating'] ?? 'Belum menilai'}",
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                                color: cocoaColor,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        parent['isi_komentar'] ?? '',
+                                        style: const TextStyle(
+                                          color: cocoaColor,
+                                        ),
+                                      ),
+
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: InkWell(
+                                          onTap: () {
+                                            setState(() {
+                                              _replyingToCommentId = parentId;
+                                              _replyingToUsername =
+                                                  parent['username'] ??
+                                                  'Anonim';
+                                            });
+                                          },
+                                          child: const Padding(
+                                            padding: EdgeInsets.symmetric(
+                                              vertical: 4.0,
+                                            ),
+                                            child: Text(
+                                              "Balas",
+                                              style: TextStyle(
+                                                color: orangeColor,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      if (replies.isNotEmpty)
+                                        Container(
+                                          margin: const EdgeInsets.only(
+                                            top: 8.0,
+                                            left: 16.0,
+                                          ), // Indentasi balasan
+                                          padding: const EdgeInsets.only(
+                                            left: 12.0,
+                                          ),
+                                          decoration: const BoxDecoration(
+                                            border: Border(
+                                              left: BorderSide(
+                                                color: creamColor,
+                                                width: 2,
+                                              ),
+                                            ),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: replies.map((reply) {
+                                              return Padding(
+                                                padding: const EdgeInsets.only(
+                                                  bottom: 12.0,
+                                                ),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      "↳ ${reply['username'] ?? 'Anonim'}",
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: cocoaColor,
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      reply['isi_komentar'] ??
+                                                          '',
+                                                      style: const TextStyle(
+                                                        color: cocoaColor,
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            }).toList(),
+                                          ),
+                                        ),
+                                    ],
                                   ),
-                                ),
-                              );
-                            },
-                          ),
+                                );
+                              },
+                            ),
                     ],
                   ),
                 ),
