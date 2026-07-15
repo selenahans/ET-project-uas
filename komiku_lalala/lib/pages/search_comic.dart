@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'read_comic.dart'; 
+import 'read_comic.dart';
 
 class SearchComic extends StatefulWidget {
   const SearchComic({super.key});
@@ -12,7 +12,6 @@ class SearchComic extends StatefulWidget {
 }
 
 class _SearchComicState extends State<SearchComic> {
-
   static const Color colorOrange = Color(0xFFEC642A);
   static const Color colorSunnyYellow = Color(0xFFFAAA21);
   static const Color colorCream = Color(0xFFFDE2CD);
@@ -28,6 +27,7 @@ class _SearchComicState extends State<SearchComic> {
     _debounce?.cancel();
     super.dispose();
   }
+
   Future<Map<String, dynamic>> fetchSearchResult() async {
     if (_searchKeyword.trim().isEmpty) {
       return {'result': 'EMPTY_QUERY'};
@@ -111,7 +111,6 @@ class _SearchComicState extends State<SearchComic> {
               key: ValueKey(_searchKeyword),
               future: fetchSearchResult(),
               builder: (context, snapshot) {
-
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
                     child: CircularProgressIndicator(color: colorOrange),
@@ -138,7 +137,8 @@ class _SearchComicState extends State<SearchComic> {
                     responseData['result'] == 'EMPTY' ||
                     responseData['result'] == 'ERROR' ||
                     listKomik.isEmpty) {
-                  String msg = responseData?['message'] ??
+                  String msg =
+                      responseData?['message'] ??
                       "Komik '$_searchKeyword' tidak ditemukan.";
 
                   return Center(
@@ -174,7 +174,7 @@ class _SearchComicState extends State<SearchComic> {
                     vertical: 12.0,
                   ),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4, 
+                    crossAxisCount: 4,
                     childAspectRatio: 1,
                     crossAxisSpacing: 5,
                     mainAxisSpacing: 5,
@@ -200,25 +200,29 @@ class _SearchComicState extends State<SearchComic> {
                         borderRadius: BorderRadius.circular(16.0),
                         clipBehavior: Clip.antiAlias,
                         child: InkWell(
-                          onTap: () {
+                          onTap: () async {
                             int komikId =
                                 int.tryParse(komik['id'].toString()) ?? 0;
                             String judul = komik['judul'] ?? 'Komik';
 
-                            Navigator.push(
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => ReadComic(
                                   komikId: komikId,
                                   judulKomik: judul,
+                                  chapterId: null,
                                 ),
                               ),
                             );
+
+                            if (mounted) {
+                              setState(() {});
+                            }
                           },
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-
                               Expanded(
                                 child: Stack(
                                   children: [
@@ -229,17 +233,17 @@ class _SearchComicState extends State<SearchComic> {
                                       fit: BoxFit.cover,
                                       errorBuilder:
                                           (context, error, stackTrace) {
-                                        return Container(
-                                          color: colorCream,
-                                          child: const Center(
-                                            child: Icon(
-                                              Icons.broken_image_rounded,
-                                              color: colorCocoa,
-                                              size: 24,
-                                            ),
-                                          ),
-                                        );
-                                      },
+                                            return Container(
+                                              color: colorCream,
+                                              child: const Center(
+                                                child: Icon(
+                                                  Icons.broken_image_rounded,
+                                                  color: colorCocoa,
+                                                  size: 24,
+                                                ),
+                                              ),
+                                            );
+                                          },
                                     ),
                                     Positioned(
                                       top: 6,
@@ -251,8 +255,9 @@ class _SearchComicState extends State<SearchComic> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: colorCocoa.withOpacity(0.75),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,

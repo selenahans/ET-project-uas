@@ -308,6 +308,7 @@ class _ReadComicState extends State<ReadComic> {
           var pages = responseData['pages'] as List<dynamic>? ?? [];
           var rawComments = responseData['comments'] as List<dynamic>? ?? [];
           String chapterTitle = responseData['chapter_title'] ?? "Chapter 1";
+          bool canInteract = responseData['can_interact'] == true;
 
           int? prevId = responseData['prev_chapter_id'] != null
               ? int.tryParse(responseData['prev_chapter_id'].toString())
@@ -511,9 +512,9 @@ class _ReadComicState extends State<ReadComic> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "Beri Rating & Komentar",
-                      style: TextStyle(
+                    Text(
+                      canInteract ? "Beri Rating & Komentar" : "Mode Preview",
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: cocoaColor,
@@ -521,320 +522,352 @@ class _ReadComicState extends State<ReadComic> {
                     ),
                     const SizedBox(height: 8),
 
-                    AnimatedSize(
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeOutBack,
-                      child: _isRatingExpanded
-                          ? Row(
-                              children: List.generate(5, (index) {
-                                bool isSelected = index < _userRating;
-                                return GestureDetector(
-                                  onTap: () {
-                                    double selectedRating = index + 1.0;
-                                    setState(
-                                      () => _userRating = selectedRating,
-                                    );
-                                    _saveRating(selectedRating);
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 8.0),
-                                    child: AnimatedSwitcher(
-                                      duration: const Duration(
-                                        milliseconds: 300,
-                                      ),
-                                      transitionBuilder: (child, animation) =>
-                                          ScaleTransition(
-                                            scale: animation,
-                                            child: child,
-                                          ),
-                                      child: Icon(
-                                        isSelected
-                                            ? Icons.star_rounded
-                                            : Icons.star_border_rounded,
-                                        key: ValueKey<bool>(isSelected),
-                                        color: isSelected
-                                            ? sunnyYellowColor
-                                            : cocoaColor.withOpacity(0.3),
-                                        size: 36,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }),
-                            )
-                          : InkWell(
-                              onTap: () =>
-                                  setState(() => _isRatingExpanded = true),
-                              borderRadius: BorderRadius.circular(8),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.star_rounded,
-                                    color: sunnyYellowColor,
-                                    size: 36,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    "Ketuk untuk beri rating",
-                                    style: TextStyle(
-                                      color: cocoaColor.withOpacity(0.6),
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    if (_replyingToCommentId != null)
+                    if (!canInteract)
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        margin: const EdgeInsets.only(bottom: 8),
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: creamColor,
                           borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              "Membalas @$_replyingToUsername",
-                              style: const TextStyle(
-                                color: cocoaColor,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            InkWell(
-                              onTap: () => setState(() {
-                                _replyingToCommentId = null;
-                                _replyingToUsername = null;
-                              }),
-                              child: const Icon(
-                                Icons.close,
-                                size: 16,
-                                color: cocoaColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                    TextField(
-                      controller: _commentController,
-                      style: const TextStyle(color: cocoaColor),
-                      decoration: InputDecoration(
-                        hintText: _replyingToCommentId != null
-                            ? "Tulis balasan..."
-                            : "Tulis komentar...",
-                        hintStyle: TextStyle(
-                          color: cocoaColor.withOpacity(0.5),
-                        ),
-                        focusedBorder: const OutlineInputBorder(
-                          borderSide: BorderSide(color: orangeColor, width: 2),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: cocoaColor.withOpacity(0.3),
+                          border: Border.all(
+                            color: orangeColor.withOpacity(0.4),
                           ),
                         ),
-                        border: const OutlineInputBorder(),
+                        child: const Text(
+                          "Komik ini masih berstatus Draft. Pembaca hanya dapat melihat preview dan belum dapat memberi rating atau komentar.",
+                          style: TextStyle(
+                            color: cocoaColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      )
+                    else ...[
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeOutBack,
+                        child: _isRatingExpanded
+                            ? Row(
+                                children: List.generate(5, (index) {
+                                  bool isSelected = index < _userRating;
+                                  return GestureDetector(
+                                    onTap: () {
+                                      double selectedRating = index + 1.0;
+                                      setState(
+                                        () => _userRating = selectedRating,
+                                      );
+                                      _saveRating(selectedRating);
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(
+                                        right: 8.0,
+                                      ),
+                                      child: AnimatedSwitcher(
+                                        duration: const Duration(
+                                          milliseconds: 300,
+                                        ),
+                                        transitionBuilder: (child, animation) =>
+                                            ScaleTransition(
+                                              scale: animation,
+                                              child: child,
+                                            ),
+                                        child: Icon(
+                                          isSelected
+                                              ? Icons.star_rounded
+                                              : Icons.star_border_rounded,
+                                          key: ValueKey<bool>(isSelected),
+                                          color: isSelected
+                                              ? sunnyYellowColor
+                                              : cocoaColor.withOpacity(0.3),
+                                          size: 36,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              )
+                            : InkWell(
+                                onTap: () =>
+                                    setState(() => _isRatingExpanded = true),
+                                borderRadius: BorderRadius.circular(8),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.star_rounded,
+                                      color: sunnyYellowColor,
+                                      size: 36,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      "Ketuk untuk beri rating",
+                                      style: TextStyle(
+                                        color: cocoaColor.withOpacity(0.6),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                       ),
-                      maxLines: 2,
-                    ),
-                    const SizedBox(height: 12),
+                      const SizedBox(height: 12),
 
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isSubmitting ? null : _submitComment,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: orangeColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
+                      if (_replyingToCommentId != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: creamColor,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                        ),
-                        child: _isSubmitting
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                "Membalas @$_replyingToUsername",
+                                style: const TextStyle(
+                                  color: cocoaColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                              )
-                            : const Text(
-                                "Kirim Komentar",
-                                style: TextStyle(fontWeight: FontWeight.bold),
                               ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 28),
-                    const Text(
-                      "Komentar Pembaca",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: cocoaColor,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // REVISI: Mengganti ListView.builder bersenang dengan Column primitif agar lancar di Web
-                    parentComments.isEmpty
-                        ? const Text(
-                            "Belum ada komentar.",
-                            style: TextStyle(color: cocoaColor),
-                          )
-                        : Column(
-                            children: parentComments.map((parent) {
-                              int parentId = int.parse(parent['id'].toString());
-                              List<dynamic> replies =
-                                  repliesMap[parentId] ?? [];
-
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 12.0),
-                                padding: const EdgeInsets.all(12.0),
-                                decoration: BoxDecoration(
-                                  color: creamColor.withOpacity(0.3),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: creamColor.withOpacity(0.8),
-                                  ),
+                              InkWell(
+                                onTap: () => setState(() {
+                                  _replyingToCommentId = null;
+                                  _replyingToUsername = null;
+                                }),
+                                child: const Icon(
+                                  Icons.close,
+                                  size: 16,
+                                  color: cocoaColor,
                                 ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          parent['username'] ?? 'Anonim',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: cocoaColor,
-                                          ),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: sunnyYellowColor.withOpacity(
-                                              0.3,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            "⭐ ${parent['rating'] ?? '-'}",
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      TextField(
+                        controller: _commentController,
+                        style: const TextStyle(color: cocoaColor),
+                        decoration: InputDecoration(
+                          hintText: _replyingToCommentId != null
+                              ? "Tulis balasan..."
+                              : "Tulis komentar...",
+                          hintStyle: TextStyle(
+                            color: cocoaColor.withOpacity(0.5),
+                          ),
+                          focusedBorder: const OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: orangeColor,
+                              width: 2,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: cocoaColor.withOpacity(0.3),
+                            ),
+                          ),
+                          border: const OutlineInputBorder(),
+                        ),
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 12),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _isSubmitting ? null : _submitComment,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: orangeColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: _isSubmitting
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text(
+                                  "Kirim Komentar",
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 28),
+                      const Text(
+                        "Komentar Pembaca",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: cocoaColor,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // REVISI: Mengganti ListView.builder bersenang dengan Column primitif agar lancar di Web
+                      parentComments.isEmpty
+                          ? const Text(
+                              "Belum ada komentar.",
+                              style: TextStyle(color: cocoaColor),
+                            )
+                          : Column(
+                              children: parentComments.map((parent) {
+                                int parentId = int.parse(
+                                  parent['id'].toString(),
+                                );
+                                List<dynamic> replies =
+                                    repliesMap[parentId] ?? [];
+
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 12.0),
+                                  padding: const EdgeInsets.all(12.0),
+                                  decoration: BoxDecoration(
+                                    color: creamColor.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: creamColor.withOpacity(0.8),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            parent['username'] ?? 'Anonim',
                                             style: const TextStyle(
-                                              fontSize: 12,
                                               fontWeight: FontWeight.bold,
                                               color: cocoaColor,
                                             ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      parent['isi_komentar'] ?? '',
-                                      style: const TextStyle(color: cocoaColor),
-                                    ),
-                                    Align(
-                                      alignment: Alignment.centerRight,
-                                      child: InkWell(
-                                        onTap: () {
-                                          setState(() {
-                                            _replyingToCommentId = parentId;
-                                            _replyingToUsername =
-                                                parent['username'] ?? 'Anonim';
-                                          });
-                                        },
-                                        child: const Padding(
-                                          padding: EdgeInsets.symmetric(
-                                            vertical: 4.0,
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: sunnyYellowColor
+                                                  .withOpacity(0.3),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              "⭐ ${parent['rating'] ?? '-'}",
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                                color: cocoaColor,
+                                              ),
+                                            ),
                                           ),
-                                          child: Text(
-                                            "Balas",
-                                            style: TextStyle(
-                                              color: orangeColor,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 12,
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        parent['isi_komentar'] ?? '',
+                                        style: const TextStyle(
+                                          color: cocoaColor,
+                                        ),
+                                      ),
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: InkWell(
+                                          onTap: () {
+                                            setState(() {
+                                              _replyingToCommentId = parentId;
+                                              _replyingToUsername =
+                                                  parent['username'] ??
+                                                  'Anonim';
+                                            });
+                                          },
+                                          child: const Padding(
+                                            padding: EdgeInsets.symmetric(
+                                              vertical: 4.0,
+                                            ),
+                                            child: Text(
+                                              "Balas",
+                                              style: TextStyle(
+                                                color: orangeColor,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12,
+                                              ),
                                             ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                    if (replies.isNotEmpty)
-                                      Container(
-                                        margin: const EdgeInsets.only(
-                                          top: 8.0,
-                                          left: 16.0,
-                                        ),
-                                        padding: const EdgeInsets.only(
-                                          left: 12.0,
-                                        ),
-                                        decoration: const BoxDecoration(
-                                          border: Border(
-                                            left: BorderSide(
-                                              color: creamColor,
-                                              width: 2,
+                                      if (replies.isNotEmpty)
+                                        Container(
+                                          margin: const EdgeInsets.only(
+                                            top: 8.0,
+                                            left: 16.0,
+                                          ),
+                                          padding: const EdgeInsets.only(
+                                            left: 12.0,
+                                          ),
+                                          decoration: const BoxDecoration(
+                                            border: Border(
+                                              left: BorderSide(
+                                                color: creamColor,
+                                                width: 2,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: replies.map((reply) {
-                                            return Padding(
-                                              padding: const EdgeInsets.only(
-                                                bottom: 12.0,
-                                              ),
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    "↳ ${reply['username'] ?? 'Anonim'}",
-                                                    style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: cocoaColor,
-                                                      fontSize: 13,
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: replies.map((reply) {
+                                              return Padding(
+                                                padding: const EdgeInsets.only(
+                                                  bottom: 12.0,
+                                                ),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      "↳ ${reply['username'] ?? 'Anonim'}",
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: cocoaColor,
+                                                        fontSize: 13,
+                                                      ),
                                                     ),
-                                                  ),
-                                                  const SizedBox(height: 2),
-                                                  Text(
-                                                    reply['isi_komentar'] ?? '',
-                                                    style: const TextStyle(
-                                                      color: cocoaColor,
-                                                      fontSize: 13,
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      reply['isi_komentar'] ??
+                                                          '',
+                                                      style: const TextStyle(
+                                                        color: cocoaColor,
+                                                        fontSize: 13,
+                                                      ),
                                                     ),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          }).toList(),
+                                                  ],
+                                                ),
+                                              );
+                                            }).toList(),
+                                          ),
                                         ),
-                                      ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                    ],
                   ],
                 ),
               ),

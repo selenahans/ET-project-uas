@@ -36,18 +36,22 @@ class _ListComicScreenState extends State<ListComicScreen> {
 
   Future<Map<String, dynamic>> fetchComics() async {
     Uri url;
+    int now = DateTime.now().millisecondsSinceEpoch;
+
     if (_searchKeyword.trim().isNotEmpty) {
       url = Uri.parse(
-        "https://ubaya.cloud/flutter/160423025/komiku/search_comics.php?q=${Uri.encodeComponent(_searchKeyword.trim())}&kategori_id=${widget.idKategori}",
+        "https://ubaya.cloud/flutter/160423025/komiku/search_comics.php?q=${Uri.encodeComponent(_searchKeyword.trim())}&kategori_id=${widget.idKategori}&t=$now",
       );
     } else {
       url = Uri.parse(
-        "https://ubaya.cloud/flutter/160423025/komiku/get_list_comics_by_category.php?kategori_id=${widget.idKategori}",
+        "https://ubaya.cloud/flutter/160423025/komiku/get_list_comics_by_category.php?kategori_id=${widget.idKategori}&t=$now",
       );
     }
 
     try {
       var response = await http.get(url);
+      print("RESPON LIST: ${response.body}");
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
@@ -214,12 +218,12 @@ class _ListComicScreenState extends State<ListComicScreen> {
                         borderRadius: BorderRadius.circular(16.0),
                         clipBehavior: Clip.antiAlias,
                         child: InkWell(
-                          onTap: () {
+                          onTap: () async {
                             int komikId =
                                 int.tryParse(komik['id'].toString()) ?? 0;
                             String judul = komik['judul'] ?? 'Komik';
 
-                            Navigator.push(
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => ReadComic(
@@ -229,6 +233,10 @@ class _ListComicScreenState extends State<ListComicScreen> {
                                 ),
                               ),
                             );
+
+                            if (mounted) {
+                              setState(() {});
+                            }
                           },
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
