@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:komiku_lalala/pages/list_comic.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../main.dart'; 
+import '../main.dart';
 import 'login.dart';
 
 class Category extends StatefulWidget {
@@ -14,8 +14,9 @@ class Category extends StatefulWidget {
 }
 
 class _CategoryState extends State<Category> {
-  String _username = active_user; 
-  int _currentBottomIndex = 0; 
+  String _username = active_user;
+  int _userId = 0;
+  int _currentBottomIndex = 0;
 
   static const Color colorOrange = Color(0xFFEC642A);
   static const Color colorSunnyYellow = Color(0xFFFAAA21);
@@ -27,14 +28,18 @@ class _CategoryState extends State<Category> {
     super.initState();
     _loadUser();
   }
+
   void _loadUser() async {
-    if (_username.isEmpty) {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      setState(() {
-        _username = prefs.getString("username") ?? "Guest";
-      });
-    }
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    setState(() {
+      _username = prefs.getString("username") ?? active_user;
+      _userId = prefs.getInt("user_id") ?? 0;
+    });
+
+    print("USER ID = $_userId");
   }
+
   Future<List<dynamic>> fetchCategoriesWithComics() async {
     var url = Uri.parse(
       "https://ubaya.cloud/flutter/160423025/komiku/get_comics_by_category.php",
@@ -56,9 +61,10 @@ class _CategoryState extends State<Category> {
       throw Exception("Kesalahan koneksi: $e");
     }
   }
+
   void doLogout() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.clear(); 
+    await prefs.clear();
     active_user = "";
 
     if (!mounted) return;
@@ -67,6 +73,19 @@ class _CategoryState extends State<Category> {
       MaterialPageRoute(builder: (context) => const LoginScreen()),
     );
   }
+
+  Future<List<dynamic>> fetchReadingHistory() async {
+    var url = Uri.parse(
+      "https://ubaya.cloud/flutter/160423025/komiku/get_reading_history.php?user_id=$_userId",
+    );
+
+    var response = await http.get(url);
+    print(response.body);
+    var data = jsonDecode(response.body);
+
+    return data["data"];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -120,12 +139,7 @@ class _CategoryState extends State<Category> {
           }
 
           var categories = snapshot.data!;
-          List<dynamic> allRecentComics = [];
-          for (var cat in categories) {
-            if (cat['comics'] != null && cat['comics'] is List) {
-              allRecentComics.addAll(cat['comics']);
-            }
-          }
+
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             child: Column(
@@ -184,113 +198,138 @@ class _CategoryState extends State<Category> {
                     ),
                   ),
                 ),
-                if (allRecentComics.isNotEmpty) ...[
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Text(
-                      "Terakhir Dibaca",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: colorCocoa,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 220,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.only(left: 16.0),
-                      itemCount: allRecentComics.length,
-                      itemBuilder: (context, cIndex) {
-                        var comic = allRecentComics[cIndex];
-                        return Container(
-                          width: 120,
-                          margin: const EdgeInsets.only(right: 14.0, bottom: 8.0),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
+                FutureBuilder<List<dynamic>>(
+                  future: fetchReadingHistory(),
+                  builder: (context, historySnapshot) {
+                    if (!historySnapshot.hasData ||
+                        historySnapshot.data!.isEmpty) {
+                      return const SizedBox();
+                    }
+
+                    List<dynamic> allRecentComics = historySnapshot.data!;
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Text(
+                            "Terakhir Dibaca",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: colorCocoa,
+                            ),
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ClipRRect(
-                                borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(16),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          height: 220,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            padding: const EdgeInsets.only(left: 16.0),
+                            itemCount: allRecentComics.length,
+                            itemBuilder: (context, cIndex) {
+                              var comic = allRecentComics[cIndex];
+                              return Container(
+                                width: 120,
+                                margin: const EdgeInsets.only(
+                                  right: 14.0,
+                                  bottom: 8.0,
                                 ),
-                                child: Image.network(
-                                  comic['poster'] ?? '',
-                                  height: 135,
-                                  width: 120,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      height: 135,
-                                      color: colorCream,
-                                      child: const Icon(
-                                        Icons.broken_image_rounded,
-                                        color: colorCocoa,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      comic['judul'] ?? 'Tanpa Judul',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                        color: colorCocoa,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.remove_red_eye_rounded,
-                                          size: 12,
-                                          color: colorOrange,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          "${comic['views'] ?? 0}",
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
-                                            color: colorCocoa.withOpacity(0.7),
-                                          ),
-                                        ),
-                                      ],
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
                                     ),
                                   ],
                                 ),
-                              ),
-                            ],
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(16),
+                                      ),
+                                      child: Image.network(
+                                        comic['poster'] ?? '',
+                                        height: 135,
+                                        width: 120,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                              return Container(
+                                                height: 135,
+                                                color: colorCream,
+                                                child: const Icon(
+                                                  Icons.broken_image_rounded,
+                                                  color: colorCocoa,
+                                                ),
+                                              );
+                                            },
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            comic['judul'] ?? 'Tanpa Judul',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                              color: colorCocoa,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.remove_red_eye_rounded,
+                                                size: 12,
+                                                color: colorOrange,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                "${comic['views'] ?? 0}",
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: colorCocoa.withOpacity(
+                                                    0.7,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                ],
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                    );
+                  },
+                ),
                 const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
                   child: Text(
                     "Kategori Komik",
                     style: TextStyle(
@@ -318,10 +357,7 @@ class _CategoryState extends State<Category> {
                       decoration: BoxDecoration(
                         color: colorCream.withOpacity(0.4),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: colorCream,
-                          width: 1.5,
-                        ),
+                        border: Border.all(color: colorCream, width: 1.5),
                       ),
                       child: ListTile(
                         contentPadding: const EdgeInsets.symmetric(
@@ -355,8 +391,8 @@ class _CategoryState extends State<Category> {
                             color: Colors.white,
                           ),
                         ),
-                        onTap: () {
-                          Navigator.push(
+                        onTap: () async {
+                          await Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => ListComicScreen(
@@ -366,6 +402,9 @@ class _CategoryState extends State<Category> {
                               ),
                             ),
                           );
+                          if (mounted) {
+                            setState(() {});
+                          }
                         },
                       ),
                     );

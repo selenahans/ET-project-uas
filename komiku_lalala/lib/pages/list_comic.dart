@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'read_comic.dart';
 import 'dart:convert';
 
@@ -69,6 +70,21 @@ class _ListComicScreenState extends State<ListComicScreen> {
         _searchKeyword = query;
       });
     });
+  }
+
+  Future<void> saveReadingHistory(int userId, int comicId) async {
+    var url = Uri.parse(
+      "https://ubaya.cloud/flutter/160423025/komiku/save_reading_history.php",
+    );
+    await http.post(
+      url,
+      body: {"user_id": userId.toString(), "comic_id": comicId.toString()},
+    );
+  }
+
+  Future<int> getCurrentUserId() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getInt("user_id") ?? 0;
   }
 
   @override
@@ -221,7 +237,12 @@ class _ListComicScreenState extends State<ListComicScreen> {
                           onTap: () async {
                             int komikId =
                                 int.tryParse(komik['id'].toString()) ?? 0;
-                            String judul = komik['judul'] ?? 'Komik';
+                            String judul = komik['judul'] ?? "Komik";
+
+                            //misalnya user id didapat dari SharedPreference
+                            int userId = await getCurrentUserId();;
+
+                            await saveReadingHistory(userId, komikId);
 
                             await Navigator.push(
                               context,
