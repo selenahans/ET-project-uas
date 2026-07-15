@@ -225,6 +225,7 @@ class _ListComicScreenState extends State<ListComicScreen> {
                                 builder: (context) => ReadComic(
                                   komikId: komikId,
                                   judulKomik: judul,
+                                  chapterId: null,
                                 ),
                               ),
                             );

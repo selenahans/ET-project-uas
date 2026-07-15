@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'read_comic.dart';
 import 'make_comic.dart';
+import 'manage_comic.dart';
 
 class MyComicsPage extends StatefulWidget {
   final int userId;
@@ -69,15 +71,20 @@ class _MyComicsPageState extends State<MyComicsPage> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
-          bool? refreshed = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MakeComic(userId: widget.userId),
-            ),
-          );
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          int currentUserId = prefs.getInt("user_id") ?? 0;
 
-          if (refreshed == true) {
-            _refreshComics(); 
+          if (mounted) {
+            var refreshed = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => MakeComic(userId: currentUserId),
+              ),
+            );
+
+            if (refreshed == true) {
+              _refreshComics();
+            }
           }
         },
         backgroundColor: colorOrange,
@@ -142,13 +149,13 @@ class _MyComicsPageState extends State<MyComicsPage> {
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(
               horizontal: 16.0,
-              vertical: 12.0,
+              vertical: 4.0,
             ),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              childAspectRatio: 0.58,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
+              crossAxisCount: 4,
+              childAspectRatio: 1,
+              crossAxisSpacing: 5,
+              mainAxisSpacing: 5,
             ),
             itemCount: listKomik.length,
             itemBuilder: (context, index) {
@@ -172,24 +179,133 @@ class _MyComicsPageState extends State<MyComicsPage> {
                   clipBehavior: Clip.antiAlias,
                   child: InkWell(
                     onTap: () {
-                      int komikId =
-                          int.tryParse(komik['id'].toString()) ?? 0;
+                      int komikId = int.tryParse(komik['id'].toString()) ?? 0;
                       String judul = komik['judul'] ?? 'Komik';
 
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ReadComic(
-                            komikId: komikId,
-                            judulKomik: judul,
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: Colors.white,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(24),
                           ),
                         ),
+                        builder: (context) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 24.0,
+                              horizontal: 16.0,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  judul,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color: colorCocoa,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  width: 40,
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                    color: colorCream,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+
+                                ListTile(
+                                  leading: Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: colorCream.withOpacity(0.5),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.edit_document,
+                                      color: colorOrange,
+                                    ),
+                                  ),
+                                  title: const Text(
+                                    "Kelola Komik",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: colorCocoa,
+                                    ),
+                                  ),
+                                  subtitle: const Text(
+                                    "Tambah chapter, edit judul, atau atur status",
+                                  ),
+                                  onTap: () {
+                                    Navigator.pop(
+                                      context,
+                                    );
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ManageComicScreen(
+                                          komikId: komikId,
+                                          judulKomik: judul,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+
+                                const Divider(color: colorCream, height: 1),
+
+                                ListTile(
+                                  leading: Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: colorCream.withOpacity(0.5),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.menu_book_rounded,
+                                      color: colorOrange,
+                                    ),
+                                  ),
+                                  title: const Text(
+                                    "Preview Pembaca",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: colorCocoa,
+                                    ),
+                                  ),
+                                  subtitle: const Text(
+                                    "Lihat tampilan komik dari sisi pembaca",
+                                  ),
+                                  onTap: () {
+                                    Navigator.pop(
+                                      context,
+                                    );
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ReadComic(
+                                          komikId: komikId,
+                                          judulKomik: judul,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+                            ),
+                          );
+                        },
                       );
                     },
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Poster + Rating
                         Expanded(
                           child: Stack(
                             children: [
@@ -247,7 +363,6 @@ class _MyComicsPageState extends State<MyComicsPage> {
                             ],
                           ),
                         ),
-
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Column(

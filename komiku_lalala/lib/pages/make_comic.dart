@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
+import 'dart:typed_data';
 
 class MakeComic extends StatefulWidget {
   final int userId;
@@ -19,82 +20,106 @@ class _MakeComicState extends State<MakeComic> {
 
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _judulController = TextEditingController();
-  final TextEditingController _posterController = TextEditingController();
-  final TextEditingController _chapterTitleController = TextEditingController();
+  final TextEditingController _posterUrlController = TextEditingController();
 
-  List<Map<String, dynamic>> _pages = [
-    {
-      'type': 'url',
-      'controller': TextEditingController(),
-      'base64': '',
-      'filename': '',
-    },
-  ];
+  bool _isLoadingSubmit = false;
+  bool _isLoadingCategories = true;
 
-  bool _isLoading = false;
+  List<Map<String, dynamic>> _kategoriList = [];
+  final List<int> _selectedKategoriIds = [];
+
+  String _posterType = 'url';
+  String _posterBase64 = '';
+  String _posterFilename = '';
+  Uint8List? _posterImageBytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCategories();
+  }
 
   @override
   void dispose() {
     _judulController.dispose();
-    _posterController.dispose();
-    _chapterTitleController.dispose();
-    for (var page in _pages) {
-      page['controller'].dispose();
-    }
+    _posterUrlController.dispose();
     super.dispose();
   }
 
-  Future<void> _pickImage(int index) async {
+  Future<void> _fetchCategories() async {
+    final Uri url = Uri.parse(
+      "https://ubaya.cloud/flutter/160423025/komiku/get_categories.php",
+    );
+    try {
+      var response = await http.get(url);
+      if (response.statusCode == 200) {
+        var jsonResponse = jsonDecode(response.body);
+        if (jsonResponse['result'] == 'OK') {
+          if (mounted) {
+            setState(() {
+              _kategoriList = List<Map<String, dynamic>>.from(
+                jsonResponse['data'],
+              );
+              _isLoadingCategories = false;
+            });
+          }
+        } else {
+          _showError(jsonResponse['message'] ?? "Gagal memuat kategori");
+          if (mounted) setState(() => _isLoadingCategories = false);
+        }
+      } else {
+        _showError("Error server: ${response.statusCode}");
+        if (mounted) setState(() => _isLoadingCategories = false);
+      }
+    } catch (e) {
+      _showError("Koneksi bermasalah: $e");
+      if (mounted) setState(() => _isLoadingCategories = false);
+    }
+  }
+
+  Future<void> _pickPosterImage() async {
     try {
       final picker = ImagePicker();
       final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
       if (image != null) {
         List<int> imageBytes = await image.readAsBytes();
-        String base64Image = base64Encode(imageBytes);
-
         setState(() {
-          _pages[index]['base64'] = base64Image;
-          _pages[index]['filename'] = image.name;
+          _posterImageBytes = Uint8List.fromList(imageBytes);
+          _posterBase64 = base64Encode(imageBytes);
+          _posterFilename = image.name;
         });
-      } else {
-        print("Pemilihan gambar dibatalkan.");
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("$e"),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
+      _showError("Gagal memilih gambar: $e");
     }
   }
 
   Future<void> _submitComic() async {
     if (!_formKey.currentState!.validate()) return;
 
-    List<Map<String, String>> finalPages = [];
-    for (var p in _pages) {
-      if (p['type'] == 'url') {
-        if (p['controller'].text.toString().trim().isNotEmpty) {
-          finalPages.add({'type': 'url', 'data': p['controller'].text.trim()});
-        }
-      } else if (p['type'] == 'base64') {
-        if (p['base64'].toString().isNotEmpty) {
-          finalPages.add({'type': 'base64', 'data': p['base64']});
-        }
-      }
-    }
-
-    if (finalPages.isEmpty) {
-      _showError("Minimal harus ada 1 halaman komik yang diisi!");
+    if (_selectedKategoriIds.isEmpty) {
+      _showError("Pilih minimal 1 kategori!");
       return;
     }
 
+    String posterDataToSubmit = '';
+    if (_posterType == 'url') {
+      if (_posterUrlController.text.trim().isEmpty) {
+        _showError("URL Poster wajib diisi!");
+        return;
+      }
+      posterDataToSubmit = _posterUrlController.text.trim();
+    } else {
+      if (_posterBase64.isEmpty) {
+        _showError("Harap pilih gambar untuk poster!");
+        return;
+      }
+      posterDataToSubmit = _posterBase64;
+    }
+
     setState(() {
-      _isLoading = true;
+      _isLoadingSubmit = true;
     });
 
     final Uri url = Uri.parse(
@@ -107,9 +132,9 @@ class _MakeComicState extends State<MakeComic> {
         body: {
           'user_id': widget.userId.toString(),
           'judul': _judulController.text.trim(),
-          'poster': _posterController.text.trim(),
-          'judul_chapter': _chapterTitleController.text.trim(),
-          'pages': jsonEncode(finalPages), // Kirim sebagai JSON string
+          'poster_type': _posterType,
+          'poster_data': posterDataToSubmit,
+          'kategori_ids': jsonEncode(_selectedKategoriIds),
         },
       );
 
@@ -119,7 +144,7 @@ class _MakeComicState extends State<MakeComic> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text("Komik berhasil diterbitkan!"),
+                content: Text("Buku Komik berhasil dibuat!"),
                 backgroundColor: colorOrange,
               ),
             );
@@ -136,7 +161,7 @@ class _MakeComicState extends State<MakeComic> {
     } finally {
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          _isLoadingSubmit = false;
         });
       }
     }
@@ -147,26 +172,6 @@ class _MakeComicState extends State<MakeComic> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
       );
-    }
-  }
-
-  void _addPageInput() {
-    setState(() {
-      _pages.add({
-        'type': 'url',
-        'controller': TextEditingController(),
-        'base64': '',
-        'filename': '',
-      });
-    });
-  }
-
-  void _removePageInput(int index) {
-    if (_pages.length > 1) {
-      setState(() {
-        _pages[index]['controller'].dispose();
-        _pages.removeAt(index);
-      });
     }
   }
 
@@ -193,7 +198,7 @@ class _MakeComicState extends State<MakeComic> {
         backgroundColor: Colors.transparent,
         foregroundColor: colorCocoa,
         title: const Text(
-          "Buat Komik Baru",
+          "Buat Buku Komik Baru",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
@@ -210,164 +215,185 @@ class _MakeComicState extends State<MakeComic> {
                 validator: (val) =>
                     (val == null || val.isEmpty) ? "Wajib diisi" : null,
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _posterController,
-                decoration: _buildInputDecoration(
-                  "URL Poster Komik",
-                  Icons.image,
+              const SizedBox(height: 16),
+
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: colorCream),
                 ),
-                validator: (val) =>
-                    (val == null || val.isEmpty) ? "Wajib diisi" : null,
-              ),
-              const SizedBox(height: 24),
-
-              TextFormField(
-                controller: _chapterTitleController,
-                decoration: _buildInputDecoration(
-                  "Judul Chapter",
-                  Icons.book,
-                ),
-                validator: (val) =>
-                    (val == null || val.isEmpty) ? "Wajib diisi" : null,
-              ),
-              const SizedBox(height: 24),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Halaman Chapter",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: colorCocoa,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Pilih Poster Komik:",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: colorCocoa,
+                      ),
                     ),
-                  ),
-                  TextButton.icon(
-                    onPressed: _addPageInput,
-                    icon: const Icon(Icons.add, color: colorOrange),
-                    label: const Text(
-                      "Tambah Hal",
-                      style: TextStyle(color: colorOrange),
-                    ),
-                  ),
-                ],
-              ),
-
-              Column(
-                children: List.generate(_pages.length, (index) {
-                  var page = _pages[index];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: colorCream),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              "Halaman ${index + 1}",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            if (_pages.length > 1)
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.close,
-                                  color: Colors.red,
-                                  size: 20,
-                                ),
-                                onPressed: () => _removePageInput(index),
-                              ),
-                          ],
+                    const SizedBox(height: 8),
+                    DropdownButton<String>(
+                      isExpanded: true,
+                      value: _posterType,
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'url',
+                          child: Text("Gunakan Link URL"),
                         ),
-                        DropdownButton<String>(
-                          isExpanded: true,
-                          value: page['type'],
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'url',
-                              child: Text("Gunakan Link URL"),
-                            ),
-                            DropdownMenuItem(
-                              value: 'base64',
-                              child: Text("Upload File"),
-                            ),
-                          ],
-                          onChanged: (val) {
-                            setState(() {
-                              page['type'] = val;
-                            });
-                          },
+                        DropdownMenuItem(
+                          value: 'base64',
+                          child: Text("Upload Foto Lokal"),
                         ),
-                        const SizedBox(height: 8),
-
-                        if (page['type'] == 'url')
-                          TextFormField(
-                            controller: page['controller'],
-                            decoration: _buildInputDecoration(
-                              "Masukkan URL Gambar",
-                              Icons.link,
-                            ),
-                          )
-                        else
-                          Row(
-                            children: [
-                              ElevatedButton.icon(
-                                onPressed: () => _pickImage(index),
-                                icon: const Icon(Icons.upload_file),
-                                label: const Text("Pilih Gambar"),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: colorCream,
-                                  foregroundColor: colorCocoa,
-                                  minimumSize: Size.zero,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  page['filename'] == ''
-                                      ? "Belum ada file"
-                                      : page['filename'],
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ),
-                            ],
-                          ),
                       ],
+                      onChanged: (val) {
+                        setState(() {
+                          _posterType = val!;
+                        });
+                      },
                     ),
-                  );
-                }),
+                    const SizedBox(height: 12),
+
+                    if (_posterType == 'url') ...[
+                      TextFormField(
+                        controller: _posterUrlController,
+                        decoration: _buildInputDecoration(
+                          "Masukkan URL Poster",
+                          Icons.link,
+                        ),
+                        onChanged: (value) {
+                          setState(() {});
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      if (_posterUrlController.text.isNotEmpty)
+                        Center(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              _posterUrlController.text,
+                              height: 150,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Text(
+                                    "Format URL gambar tidak valid atau rusak.",
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                            ),
+                          ),
+                        ),
+                    ] else ...[
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 12,
+                        runSpacing: 8,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: _pickPosterImage,
+                            icon: const Icon(Icons.upload_file),
+                            label: const Text("Pilih Foto"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: colorCream,
+                              foregroundColor: colorCocoa,
+                            ),
+                          ),
+                          Text(
+                            _posterFilename.isEmpty
+                                ? "Belum ada file"
+                                : _posterFilename,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (_posterImageBytes != null)
+                        Center(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.memory(
+                              _posterImageBytes!,
+                              height: 150,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ],
+                ),
               ),
+
+              const SizedBox(height: 24),
+
+              const Text(
+                "Pilih Kategori (Bisa lebih dari 1):",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: colorCocoa,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              _isLoadingCategories
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: CircularProgressIndicator(color: colorOrange),
+                      ),
+                    )
+                  : _kategoriList.isEmpty
+                  ? const Text("Belum ada kategori tersedia.")
+                  : Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: colorCream),
+                      ),
+                      child: Column(
+                        children: _kategoriList.map((kategori) {
+                          return CheckboxListTile(
+                            activeColor: colorOrange,
+                            title: Text(kategori['nama_kategori']),
+                            value: _selectedKategoriIds.contains(
+                              kategori['id'],
+                            ),
+                            onChanged: (bool? value) {
+                              setState(() {
+                                if (value == true) {
+                                  _selectedKategoriIds.add(kategori['id']);
+                                } else {
+                                  _selectedKategoriIds.remove(kategori['id']);
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ),
 
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : _submitComic,
+                  onPressed: _isLoadingSubmit || _isLoadingCategories
+                      ? null
+                      : _submitComic,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colorOrange,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: _isLoading
+                  child: _isLoadingSubmit
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text(
-                          "Terbitkan Komik",
+                          "Buat Komik",
                           style: TextStyle(color: Colors.white, fontSize: 16),
                         ),
                 ),
