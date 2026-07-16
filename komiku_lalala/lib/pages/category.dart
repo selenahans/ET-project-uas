@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:komiku_lalala/pages/list_comic.dart';
+import 'package:komiku_lalala/pages/read_comic.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
 import 'login.dart';
@@ -84,6 +85,17 @@ class _CategoryState extends State<Category> {
     var data = jsonDecode(response.body);
 
     return data["data"];
+  }
+
+  Future<void> saveReadingHistory(int comicId) async {
+    var url = Uri.parse(
+      "https://ubaya.cloud/flutter/160423025/komiku/save_reading_history.php",
+    );
+
+    await http.post(
+      url,
+      body: {"user_id": _userId.toString(),"comic_id": comicId.toString()},
+    );
   }
 
   @override
@@ -232,89 +244,113 @@ class _CategoryState extends State<Category> {
                             itemCount: allRecentComics.length,
                             itemBuilder: (context, cIndex) {
                               var comic = allRecentComics[cIndex];
-                              return Container(
-                                width: 120,
-                                margin: const EdgeInsets.only(
-                                  right: 14.0,
-                                  bottom: 8.0,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: const BorderRadius.vertical(
-                                        top: Radius.circular(16),
-                                      ),
-                                      child: Image.network(
-                                        comic['poster'] ?? '',
-                                        height: 135,
-                                        width: 120,
-                                        fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (context, error, stackTrace) {
-                                              return Container(
-                                                height: 135,
-                                                color: colorCream,
-                                                child: const Icon(
-                                                  Icons.broken_image_rounded,
-                                                  color: colorCocoa,
-                                                ),
-                                              );
-                                            },
+
+                              return GestureDetector(
+                                onTap: () async {
+                                  int comicId = int.parse(comic['id'].toString());
+                                  await saveReadingHistory(comicId);
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ReadComic(
+                                        komikId: int.parse(
+                                          comic['id'].toString(),
+                                        ),
+                                        judulKomik: comic['judul'],
+                                        chapterId: null,
                                       ),
                                     ),
-                                    Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            comic['judul'] ?? 'Tanpa Judul',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 12,
-                                              color: colorCocoa,
+                                  );
+
+                                  if (mounted) {
+                                    setState(() {});
+                                  }
+                                },
+                                child: Container(
+                                  width: 120,
+                                  margin: const EdgeInsets.only(
+                                    right: 14.0,
+                                    bottom: 8.0,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius:
+                                            const BorderRadius.vertical(
+                                              top: Radius.circular(16),
                                             ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Row(
-                                            children: [
-                                              const Icon(
-                                                Icons.remove_red_eye_rounded,
-                                                size: 12,
-                                                color: colorOrange,
+                                        child: Image.network(
+                                          comic['poster'] ?? '',
+                                          height: 135,
+                                          width: 120,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                                return Container(
+                                                  height: 135,
+                                                  color: colorCream,
+                                                  child: const Icon(
+                                                    Icons.broken_image_rounded,
+                                                    color: colorCocoa,
+                                                  ),
+                                                );
+                                              },
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              comic['judul'] ?? 'Tanpa Judul',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12,
+                                                color: colorCocoa,
                                               ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                "${comic['views'] ?? 0}",
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: colorCocoa.withOpacity(
-                                                    0.7,
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Row(
+                                              children: [
+                                                const Icon(
+                                                  Icons.remove_red_eye_rounded,
+                                                  size: 12,
+                                                  color: colorOrange,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  "${comic['views'] ?? 0}",
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: colorCocoa
+                                                        .withOpacity(0.7),
                                                   ),
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
+                                              ],
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               );
                             },
