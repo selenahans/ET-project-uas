@@ -23,7 +23,6 @@ class _AddChapterScreenState extends State<AddChapterScreen> {
 
   bool _isLoading = false;
 
-  // List dinamis untuk menampung halaman-halaman komik
   final List<Map<String, dynamic>> _pages = [
     {
       'type': 'url',
@@ -124,7 +123,7 @@ class _AddChapterScreenState extends State<AddChapterScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text("Chapter berhasil ditambahkan!"), backgroundColor: Colors.green),
             );
-            Navigator.pop(context, true); // Kembali dengan parameter sukses
+            Navigator.pop(context, true); 
           }
         } else {
           _showError(data['message'] ?? "Gagal menambahkan chapter.");

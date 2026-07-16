@@ -239,7 +239,6 @@ class _ListComicScreenState extends State<ListComicScreen> {
                                 int.tryParse(komik['id'].toString()) ?? 0;
                             String judul = komik['judul'] ?? "Komik";
 
-                            //misalnya user id didapat dari SharedPreference
                             int userId = await getCurrentUserId();;
 
                             await saveReadingHistory(userId, komikId);

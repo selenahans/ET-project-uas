@@ -122,7 +122,7 @@ class _ReadComicState extends State<ReadComic> {
         builder: (context) => ReadComic(
           komikId: widget.komikId,
           judulKomik: widget.judulKomik,
-          chapterId: targetChapterId, // Kirim ID asli dari database
+          chapterId: targetChapterId,
         ),
       ),
     );
@@ -335,7 +335,7 @@ class _ReadComicState extends State<ReadComic> {
           return ListView(
             padding: const EdgeInsets.only(bottom: 40),
             children: [
-              // --- 1. HEADER CHAPTER ---
+              
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
@@ -365,7 +365,7 @@ class _ReadComicState extends State<ReadComic> {
               ),
               const SizedBox(height: 12),
 
-              // --- 2. HALAMAN KOMIK ---
+              
               if (pages.isEmpty)
                 const Padding(
                   padding: EdgeInsets.all(32.0),
@@ -455,7 +455,7 @@ class _ReadComicState extends State<ReadComic> {
                   }).toList(),
                 ),
 
-              // --- 3. NAVIGASI CHAPTER ---
+              
               Padding(
                 padding: const EdgeInsets.symmetric(
                   vertical: 20,
@@ -505,7 +505,7 @@ class _ReadComicState extends State<ReadComic> {
                 ),
               ),
 
-              // --- 4. FORM RATING & KOMENTAR ---
+              
               Container(
                 color: Colors.white,
                 padding: const EdgeInsets.all(16.0),
@@ -715,7 +715,7 @@ class _ReadComicState extends State<ReadComic> {
                       ),
                       const SizedBox(height: 12),
 
-                      // REVISI: Mengganti ListView.builder bersenang dengan Column primitif agar lancar di Web
+                      
                       parentComments.isEmpty
                           ? const Text(
                               "Belum ada komentar.",

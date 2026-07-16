@@ -69,7 +69,7 @@ class _ManageComicScreenState extends State<ManageComicScreen> {
     String currentStatus = _comicData!['status'];
     String newStatus = currentStatus == 'Published' ? 'Draft' : 'Published';
 
-    // Validasi dasar sebelum publish
+   
     if (newStatus == 'Published' && _chapters.isEmpty) {
       _showError("Komik minimal harus memiliki 1 Chapter untuk di-publish!");
       return;
@@ -88,7 +88,7 @@ class _ManageComicScreenState extends State<ManageComicScreen> {
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
         if (data['result'] == 'SUCCESS') {
-          // Refresh data jika sukses
+     
           _fetchComicData();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -159,7 +159,7 @@ class _ManageComicScreenState extends State<ManageComicScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // --- HEADER: INFO KOMIK ---
+                    
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -176,7 +176,7 @@ class _ManageComicScreenState extends State<ManageComicScreen> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Poster
+                          
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
                             child: Image.network(
@@ -196,7 +196,7 @@ class _ManageComicScreenState extends State<ManageComicScreen> {
                             ),
                           ),
                           const SizedBox(width: 16),
-                          // Detail
+                          
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,7 +229,7 @@ class _ManageComicScreenState extends State<ManageComicScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 12),
-                                // Tombol Publish / Draft
+                                
                                 ElevatedButton.icon(
                                   onPressed: _toggleStatus,
                                   style: ElevatedButton.styleFrom(
@@ -278,7 +278,7 @@ class _ManageComicScreenState extends State<ManageComicScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // --- LIST CHAPTER ---
+                    
                     if (_chapters.isEmpty)
                       Container(
                         width: double.infinity,
